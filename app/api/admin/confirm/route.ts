@@ -21,7 +21,7 @@ export async function GET(request: Request) {
             <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
               <h1 style="color: #FF6B00;">Invalid Request</h1>
               <p style="color: #666;">Missing required parameters.</p>
-              <a href="https://ssssovms.vercel.app/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
             </div>
           </body>
         </html>
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
             <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
               <h1 style="color: #FF6B00;">Invalid or Expired Link</h1>
               <p style="color: #666;">The confirmation link is invalid or has expired.</p>
-              <a href="https://ssssovms.vercel.app/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
             </div>
           </body>
         </html>
@@ -92,7 +92,7 @@ export async function GET(request: Request) {
             <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
               <h1 style="color: #FF6B00;">Link Expired</h1>
               <p style="color: #666;">The confirmation link has expired. Please request a new admin invitation.</p>
-              <a href="https://ssssovms.vercel.app/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
             </div>
           </body>
         </html>
@@ -158,7 +158,7 @@ export async function GET(request: Request) {
             </div>
             <h1 style="color: #FF6B00;">Admin Account Confirmed!</h1>
             <p style="color: #666; margin-bottom: 20px;">Your admin account has been successfully created. You can now log in to the system.</p>
-            <a href="https://ssssovms.vercel.app/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">Go to Login</a>
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">Go to Login</a>
           </div>
         </body>
       </html>
@@ -184,7 +184,7 @@ export async function GET(request: Request) {
           <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
             <h1 style="color: #FF6B00;">Error</h1>
             <p style="color: #666;">An error occurred while confirming your admin account. Please try again or contact support.</p>
-            <a href="https://ssssovms.vercel.app/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
           </div>
         </body>
       </html>

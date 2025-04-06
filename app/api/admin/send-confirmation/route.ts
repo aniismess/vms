@@ -23,8 +23,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Generate confirmation URL using the deployed URL
-    const confirmUrl = `https://ssssovms.vercel.app/api/admin/confirm?token=${token}&email=${encodeURIComponent(email)}`
+    // Generate confirmation URL using the environment variable
+    const confirmUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/confirm?token=${token}&email=${encodeURIComponent(email)}`
 
     // Send email to current admin
     await transporter.sendMail({
