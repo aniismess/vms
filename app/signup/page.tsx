@@ -58,6 +58,16 @@ export default function SignupPage() {
       })
 
       if (authError) {
+        if (authError.message.includes('rate limit')) {
+          // Handle rate limit error
+          toast({
+            title: "Rate Limit Exceeded",
+            description: "Too many signup attempts. Please try again in a few minutes or contact the administrator.",
+            variant: "destructive",
+            duration: 6000,
+          })
+          return
+        }
         if (authError.message.includes('confirmation email')) {
           // Handle SMTP configuration error
           toast({
