@@ -310,37 +310,16 @@ export function VolunteerProfileDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="special_qualifications">Special Qualifications</Label>
+              <Label htmlFor="qualifications">Special Qualifications</Label>
               {isEditing ? (
                 <Input
-                  id="special_qualifications"
+                  id="qualifications"
                   value={editedVolunteer.special_qualifications || ""}
                   onChange={(e) => handleFieldChange('special_qualifications', e.target.value)}
                 />
               ) : (
                 <div className="font-medium">{volunteer.special_qualifications || "Not specified"}</div>
               )}
-            </div>
-
-            <div className="col-span-2 flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="sevadal_training"
-                  checked={editedVolunteer.sevadal_training_certificate === 'yes'}
-                  onCheckedChange={(checked) => setEditedVolunteer({ ...editedVolunteer, sevadal_training_certificate: checked ? 'yes' : 'no' })}
-                  disabled={!isEditing}
-                />
-                <Label htmlFor="sevadal_training">Sevadal Training Certificate</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="past_service"
-                  checked={editedVolunteer.past_prashanti_service === 'yes'}
-                  onCheckedChange={(checked) => setEditedVolunteer({ ...editedVolunteer, past_prashanti_service: checked ? 'yes' : 'no' })}
-                  disabled={!isEditing}
-                />
-                <Label htmlFor="past_service">Past Prashanti Service</Label>
-              </div>
             </div>
           </div>
         </form>

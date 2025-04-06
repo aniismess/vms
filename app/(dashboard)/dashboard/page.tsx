@@ -179,8 +179,6 @@ export default function DashboardPage() {
       "Samiti/Bhajan Mandli": volunteer.samiti_or_bhajan_mandli || "N/A",
       "Education": volunteer.education || "N/A",
       "Special Qualifications": volunteer.special_qualifications || "N/A",
-      "Sevadal Training Certificate": volunteer.sevadal_training_certificate ? "Yes" : "No",
-      "Past Prashanti Service": volunteer.past_prashanti_service ? "Yes" : "No",
       "Last Service Location": volunteer.last_service_location || "N/A",
       "Other Service Location": volunteer.other_service_location || "N/A",
       "Duty Point": volunteer.duty_point || "N/A",

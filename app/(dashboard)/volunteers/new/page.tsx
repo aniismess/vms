@@ -75,8 +75,6 @@ export default function NewVolunteerPage() {
   const [samiti, setSamiti] = useState("")
   const [education, setEducation] = useState("")
   const [qualifications, setQualifications] = useState("")
-  const [sevadalTraining, setSevadalTraining] = useState(false)
-  const [pastService, setPastService] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -150,8 +148,6 @@ export default function NewVolunteerPage() {
         samiti_or_bhajan_mandli: samiti,
         education: education,
         special_qualifications: qualifications || null,
-        sevadal_training_certificate: sevadalTraining ? 'yes' : 'no',
-        past_prashanti_service: 'no',
         is_cancelled: 'no',
         serial_number: null,
         prashanti_arrival: null,
@@ -368,27 +364,6 @@ export default function NewVolunteerPage() {
                   rows={2}
                   className="border-sai-orange/20 focus:border-sai-orange/40"
                 />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="sevadal" 
-                    checked={sevadalTraining} 
-                    onCheckedChange={setSevadalTraining}
-                    className="data-[state=checked]:bg-sai-orange"
-                  />
-                  <Label htmlFor="sevadal">Sevadal Training Certificate</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="past-service" 
-                    checked={pastService} 
-                    onCheckedChange={setPastService}
-                    className="data-[state=checked]:bg-sai-orange"
-                  />
-                  <Label htmlFor="past-service">Past Prashanti Service</Label>
-                </div>
               </div>
             </CardContent>
             <CardFooter>

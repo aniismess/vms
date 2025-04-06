@@ -268,14 +268,15 @@ export default function VolunteerDetailsPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Special Qualifications</Label>
+                  <Label htmlFor="qualifications">Special Qualifications</Label>
                   {isEditing ? (
                     <Input
-                      value={editedVolunteer?.special_qualifications || ''}
+                      id="qualifications"
+                      value={editedVolunteer?.special_qualifications || ""}
                       onChange={(e) => setEditedVolunteer({ ...editedVolunteer, special_qualifications: e.target.value })}
                     />
                   ) : (
-                    <div className="text-sm">{editedVolunteer?.special_qualifications || "Not specified"}</div>
+                    <div className="font-medium">{volunteer.special_qualifications || "Not specified"}</div>
                   )}
                 </div>
               </div>

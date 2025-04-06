@@ -14,14 +14,12 @@ export type VolunteerData = {
   age: number | null
   aadhar_number: string | null
   sai_connect_id: string
-  sevadal_training_certificate: YesNoType
   mobile_number: string | null
   sss_district: string | null
   gender: string | null
   samiti_or_bhajan_mandli: string | null
   education: string | null
   special_qualifications: string | null
-  past_prashanti_service: YesNoType
   last_service_location: string | null
   other_service_location: string | null
   prashanti_arrival: string | null
@@ -120,8 +118,7 @@ export async function getVolunteerStats() {
 }
 
 export async function createVolunteerInDb(volunteer: Omit<VolunteerData, 'registered_volunteers'>) {
-  // First, create a new object with all fields except the ones we need to convert
-  const { sevadal_training_certificate, past_prashanti_service, is_cancelled, ...rest } = volunteer;
+  const { is_cancelled, ...rest } = volunteer;
 
   // Helper function to convert to YesNoType
   const toYesNo = (value: any): YesNoType => {
@@ -135,9 +132,6 @@ export async function createVolunteerInDb(volunteer: Omit<VolunteerData, 'regist
   // Now create the formatted volunteer with explicit conversions
   const formattedVolunteer = {
     ...rest,
-    // Use the helper function to convert each field
-    sevadal_training_certificate: toYesNo(sevadal_training_certificate),
-    past_prashanti_service: toYesNo(past_prashanti_service),
     is_cancelled: toYesNo(is_cancelled)
   };
 
@@ -163,12 +157,6 @@ export async function updateVolunteerInDb(id: string, updates: Partial<Volunteer
   // Convert boolean fields to 'yes'/'no'
   const formattedUpdates = {
     ...updateFields,
-    ...(updates.sevadal_training_certificate !== undefined && {
-      sevadal_training_certificate: updates.sevadal_training_certificate ? 'yes' : 'no'
-    }),
-    ...(updates.past_prashanti_service !== undefined && {
-      past_prashanti_service: updates.past_prashanti_service ? 'yes' : 'no'
-    }),
     ...(updates.is_cancelled !== undefined && {
       is_cancelled: updates.is_cancelled ? 'yes' : 'no'
     })

@@ -14,26 +14,24 @@ import { supabase } from "@/lib/supabase"
 import { Progress } from "@/components/ui/progress"
 import { YesNoType } from "@/lib/types"
 
-interface VolunteerData {
-  serial_number?: string;
-  full_name?: string;
-  age?: number | null;
-  aadhar_number?: string;
-  sai_connect_id?: string;
-  sevadal_training_certificate: YesNoType;
-  mobile_number?: string;
-  sss_district?: string;
-  samiti_or_bhajan_mandli?: string;
-  education?: string;
-  special_qualifications?: string;
-  past_prashanti_service: YesNoType;
-  last_service_location?: string;
-  other_service_location?: string;
-  prashanti_arrival?: string | null;
-  prashanti_departure?: string | null;
-  duty_point?: string;
-  is_cancelled: YesNoType;
-  [key: string]: any; // Allow dynamic string keys
+interface VolunteerExcelData {
+  serial_number: string | null;
+  full_name: string | null;
+  age: number | null;
+  aadhar_number: string | null;
+  sai_connect_id: string;
+  mobile_number: string | null;
+  sss_district: string | null;
+  gender: string | null;
+  samiti_or_bhajan_mandli: string | null;
+  education: string | null;
+  special_qualifications: string | null;
+  last_service_location: string | null;
+  other_service_location: string | null;
+  prashanti_arrival: string | null;
+  prashanti_departure: string | null;
+  duty_point: string | null;
+  is_cancelled: boolean;
 }
 
 // Header mapping for both English and Hindi
@@ -44,13 +42,12 @@ const headerMapping: { [key: string]: string } = {
   "age": "age",
   "aadhar number": "aadhar_number",
   "sai connect id": "sai_connect_id",
-  "sevadal training certificate": "sevadal_training_certificate",
   "mobile number": "mobile_number",
   "sss district": "sss_district",
+  "gender": "gender",
   "samiti or bhajan mandli": "samiti_or_bhajan_mandli",
   "education": "education",
   "special qualifications": "special_qualifications",
-  "past prashanti service": "past_prashanti_service",
   "last service location": "last_service_location",
   "other service location": "other_service_location",
   "prashanti arrival": "prashanti_arrival",
@@ -64,13 +61,12 @@ const headerMapping: { [key: string]: string } = {
   "आयु": "age",
   "आधार नंबर": "aadhar_number",
   "साई कनेक्ट आईडी": "sai_connect_id",
-  "सेवादल प्रशिक्षण प्रमाणपत्र": "sevadal_training_certificate",
   "मोबाइल नंबर": "mobile_number",
   "एसएसएस जिला": "sss_district",
+  "जिला": "sss_district",
   "समिति या भजन मंडली": "samiti_or_bhajan_mandli",
   "शिक्षा": "education",
   "विशेष योग्यता": "special_qualifications",
-  "पूर्व प्रशांति सेवा": "past_prashanti_service",
   "अंतिम सेवा स्थान": "last_service_location",
   "अन्य सेवा स्थान": "other_service_location",
   "प्रशांति आगमन": "prashanti_arrival",
@@ -88,11 +84,11 @@ type DeduplicationStats = {
 }
 
 // Add this function before the ExcelUpload component
-function deduplicateVolunteers(volunteers: Partial<VolunteerData>[]): {
-  uniqueVolunteers: Partial<VolunteerData>[];
+function deduplicateVolunteers(volunteers: Partial<VolunteerExcelData>[]): {
+  uniqueVolunteers: Partial<VolunteerExcelData>[];
   stats: DeduplicationStats;
 } {
-  const seen = new Map<string, Partial<VolunteerData>>();
+  const seen = new Map<string, Partial<VolunteerExcelData>>();
   const duplicateIds: string[] = [];
 
   volunteers.forEach((volunteer) => {
@@ -128,7 +124,7 @@ function normalizeBoolean(value: any): boolean {
   return false;
 }
 
-function validateVolunteerData(volunteer: Partial<VolunteerData>, rowIndex: number): string[] {
+function validateVolunteerData(volunteer: Partial<VolunteerExcelData>, rowIndex: number): string[] {
   const errors: string[] = [];
   
   // Required fields validation
@@ -208,35 +204,37 @@ type DatabaseFields = {
   full_name: string;
   age?: number | null;
   aadhar_number?: string;
-  sevadal_training_certificate: boolean;
   mobile_number?: string;
   sss_district?: string;
   samiti_or_bhajan_mandli?: string;
   education?: string;
   special_qualifications?: string;
-  past_prashanti_service: boolean;
+  last_service_location?: string | null;
+  other_service_location?: string | null;
   prashanti_arrival?: string | null;
   prashanti_departure?: string | null;
+  duty_point?: string | null;
   is_cancelled: boolean;
 }
 
 // Add this function to filter and transform data
-function transformToDatabaseFormat(volunteer: Partial<VolunteerData>): Partial<DatabaseFields> {
+function transformToDatabaseFormat(volunteer: Partial<VolunteerExcelData>): Partial<DatabaseFields> {
   const dbFields: Partial<DatabaseFields> = {
     sai_connect_id: volunteer.sai_connect_id,
     full_name: volunteer.full_name,
     age: volunteer.age,
     aadhar_number: volunteer.aadhar_number,
-    sevadal_training_certificate: volunteer.sevadal_training_certificate ? 'yes' : 'no',
     mobile_number: volunteer.mobile_number,
     sss_district: volunteer.sss_district,
     samiti_or_bhajan_mandli: volunteer.samiti_or_bhajan_mandli,
     education: volunteer.education,
     special_qualifications: volunteer.special_qualifications,
-    past_prashanti_service: volunteer.past_prashanti_service ? 'yes' : 'no',
+    last_service_location: volunteer.last_service_location,
+    other_service_location: volunteer.other_service_location,
     prashanti_arrival: volunteer.prashanti_arrival,
     prashanti_departure: volunteer.prashanti_departure,
-    is_cancelled: volunteer.is_cancelled ? 'yes' : 'no'
+    duty_point: volunteer.duty_point,
+    is_cancelled: volunteer.is_cancelled
   };
 
   // Remove undefined and null values
@@ -257,17 +255,18 @@ type DatabaseHeader = {
 const databaseHeaders: DatabaseHeader[] = [
   { key: 'sai_connect_id', label: 'SAI Connect ID', required: true, type: 'string' },
   { key: 'full_name', label: 'Full Name', required: true, type: 'string' },
-  { key: 'age', label: 'Age', required: false, type: 'number' },
+  { key: 'age', label: 'Age', required: true, type: 'number' },
   { key: 'aadhar_number', label: 'Aadhar Number', required: false, type: 'string' },
-  { key: 'sevadal_training_certificate', label: 'Sevadal Training Certificate', required: false, type: 'boolean' },
-  { key: 'mobile_number', label: 'Mobile Number', required: false, type: 'string' },
-  { key: 'sss_district', label: 'SSS District', required: false, type: 'string' },
+  { key: 'mobile_number', label: 'Mobile Number', required: true, type: 'string' },
+  { key: 'sss_district', label: 'SSS District', required: true, type: 'string' },
   { key: 'samiti_or_bhajan_mandli', label: 'Samiti or Bhajan Mandli', required: false, type: 'string' },
   { key: 'education', label: 'Education', required: false, type: 'string' },
   { key: 'special_qualifications', label: 'Special Qualifications', required: false, type: 'string' },
-  { key: 'past_prashanti_service', label: 'Past Prashanti Service', required: false, type: 'boolean' },
-  { key: 'prashanti_arrival', label: 'Prashanti Arrival', required: false, type: 'date' },
-  { key: 'prashanti_departure', label: 'Prashanti Departure', required: false, type: 'date' },
+  { key: 'last_service_location', label: 'Last Service Location', required: false, type: 'string' },
+  { key: 'other_service_location', label: 'Other Service Location', required: false, type: 'string' },
+  { key: 'prashanti_arrival', label: 'Prashanti Arrival', required: false, type: 'string' },
+  { key: 'prashanti_departure', label: 'Prashanti Departure', required: false, type: 'string' },
+  { key: 'duty_point', label: 'Duty Point', required: false, type: 'string' },
   { key: 'is_cancelled', label: 'Is Cancelled', required: false, type: 'boolean' }
 ];
 
@@ -381,15 +380,13 @@ export function ExcelUpload({ onSuccess }: { onSuccess?: () => void }) {
 
       // Process rows with header mapping
       const rows = rawData.slice(1) as unknown[][]
-      const volunteers: Partial<VolunteerData>[] = []
+      const volunteers: Partial<VolunteerExcelData>[] = []
       const validationErrors: string[] = []
 
       rows.forEach((row, index) => {
         try {
-          const volunteer: Partial<VolunteerData> = {
-            sevadal_training_certificate: 'no',
-            past_prashanti_service: 'no',
-            is_cancelled: 'no'
+          const volunteer: Partial<VolunteerExcelData> = {
+            is_cancelled: false
           }
 
           // Process each cell based on column mapping

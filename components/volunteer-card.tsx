@@ -72,21 +72,11 @@ export function VolunteerCard({ volunteer, onCancel, onDelete }: VolunteerCardPr
             </div>
           )}
 
-          {(volunteer.sevadal_training_certificate || volunteer.past_prashanti_service) && (
-            <div className="flex items-center gap-2">
-              {volunteer.sevadal_training_certificate && (
-                <Badge variant="secondary" className="bg-sai-orange/10 text-sai-orange hover:bg-sai-orange/20">
-                  <Award className="mr-1 h-3 w-3" />
-                  Sevadal Trained
-                </Badge>
-              )}
-              {volunteer.past_prashanti_service && (
-                <Badge variant="secondary" className="bg-sai-blue/10 text-sai-blue hover:bg-sai-blue/20">
-                  Past Prashanti Service
-                </Badge>
-              )}
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {volunteer.special_qualifications && (
+              <Badge variant="secondary">{volunteer.special_qualifications}</Badge>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
