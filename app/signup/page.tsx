@@ -57,7 +57,20 @@ export default function SignupPage() {
         }
       })
 
-      if (authError) throw authError
+      if (authError) {
+        if (authError.message.includes('confirmation email')) {
+          // Handle SMTP configuration error
+          toast({
+            title: "Account Created",
+            description: "Your account has been created, but there was an issue sending the confirmation email. Please contact the administrator.",
+            duration: 6000,
+          })
+          // Still redirect to login since the account was created
+          router.push("/login")
+          return
+        }
+        throw authError
+      }
 
       toast({
         title: "Success!",
@@ -72,6 +85,7 @@ export default function SignupPage() {
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create account",
         variant: "destructive",
+        duration: 6000,
       })
     } finally {
       setIsLoading(false)
