@@ -5,6 +5,7 @@ import { Playfair_Display } from "next/font/google"
 import "./globals.css"
 import { Providers } from "./providers"
 import { ErrorBoundary } from "@/components/error-boundary"
+import { Analytics } from "@vercel/analytics/react"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" })
@@ -40,6 +41,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <Providers>
             {children}
+            <Analytics />
           </Providers>
         </ErrorBoundary>
       </body>
