@@ -119,61 +119,25 @@ export async function getVolunteerStats() {
 }
 
 export async function createVolunteerInDb(volunteer: Omit<VolunteerData, 'registered_volunteers'>) {
-  // Extract all fields to ensure proper type conversion
-  const {
-    sai_connect_id,
-    full_name,
-    age,
-    mobile_number,
-    aadhar_number,
-    sss_district,
-    gender,
-    samiti_or_bhajan_mandli,
-    education,
-    special_qualifications,
-    sevadal_training_certificate,
-    past_prashanti_service,
-    is_cancelled,
-    serial_number,
-    prashanti_arrival,
-    prashanti_departure,
-    duty_point,
-    last_service_location,
-    other_service_location,
-    created_by_id
-  } = volunteer;
+  // First, create a new object with all fields except the ones we need to convert
+  const { sevadal_training_certificate, past_prashanti_service, is_cancelled, ...rest } = volunteer;
 
-  // Helper function to convert to YesNoType with proper type checking
-  const toYesNo = (value: unknown): YesNoType => {
+  // Helper function to convert to YesNoType
+  const toYesNo = (value: any): YesNoType => {
     if (typeof value === 'boolean') {
       return value ? 'yes' : 'no';
     }
-    return value === 'yes' ? 'yes' : 'no';
+    if (value === 'yes') return 'yes';
+    return 'no';
   };
 
-  // Create a new object with explicit type conversions
+  // Now create the formatted volunteer with explicit conversions
   const formattedVolunteer = {
-    sai_connect_id,
-    full_name,
-    age,
-    mobile_number,
-    aadhar_number,
-    sss_district,
-    gender,
-    samiti_or_bhajan_mandli,
-    education,
-    special_qualifications,
-    // Use the helper function for YesNoType fields
+    ...rest,
+    // Use the helper function to convert each field
     sevadal_training_certificate: toYesNo(sevadal_training_certificate),
     past_prashanti_service: toYesNo(past_prashanti_service),
-    is_cancelled: toYesNo(is_cancelled),
-    serial_number,
-    prashanti_arrival,
-    prashanti_departure,
-    duty_point,
-    last_service_location,
-    other_service_location,
-    created_by_id
+    is_cancelled: toYesNo(is_cancelled)
   };
 
   console.log('Creating volunteer with formatted data:', formattedVolunteer);

@@ -36,7 +36,7 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Origin',
-            value: 'https://ssssovms.vercel.app',
+            value: '*',
           },
           {
             key: 'Access-Control-Allow-Methods',
@@ -47,14 +47,6 @@ const nextConfig = {
             value: 'X-Requested-With, Content-Type, Authorization',
           },
         ],
-      },
-    ]
-  },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'https://ssssovms.vercel.app/api/:path*',
       },
     ]
   },

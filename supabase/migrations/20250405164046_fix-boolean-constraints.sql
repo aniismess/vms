@@ -38,3 +38,4 @@ ALTER TABLE volunteers_volunteers ALTER COLUMN past_prashanti_service SET DEFAUL
 ALTER TABLE volunteers_volunteers ALTER COLUMN is_cancelled SET DEFAULT 'no';
 
 COMMIT;
+
