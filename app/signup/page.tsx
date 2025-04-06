@@ -45,12 +45,7 @@ export default function SignupPage() {
         return
       }
 
-      // Check if this is the first user
-      const { count } = await supabase
-        .from('admin_users')
-        .select('*', { count: 'exact', head: true })
-
-      // Sign up the user
+      // Sign up the user - the trigger will handle admin creation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -87,21 +82,28 @@ export default function SignupPage() {
         throw authError
       }
 
-      // If this is the first user, add them to admin_users
-      if (count === 0 && authData.user) {
-        const { error: adminError } = await supabase
+      // Check if this is the first user and add to admin_users if needed
+      if (authData.user) {
+        const { count } = await supabase
           .from('admin_users')
-          .insert([
-            {
-              id: authData.user.id,
-              email: authData.user.email,
-              created_by: authData.user.id
-            }
-          ])
+          .select('*', { count: 'exact', head: true })
 
-        if (adminError) {
-          console.error('Error creating admin user:', adminError)
-          // Don't throw the error, just log it
+        if (count === 0) {
+          // This is the first user, add them to admin_users
+          const { error: adminError } = await supabase
+            .from('admin_users')
+            .insert([
+              {
+                id: authData.user.id,
+                email: authData.user.email,
+                created_at: new Date().toISOString()
+              }
+            ])
+
+          if (adminError) {
+            console.error('Error adding first admin:', adminError)
+            // Don't throw here, as the trigger might have already handled it
+          }
         }
       }
 
@@ -112,12 +114,13 @@ export default function SignupPage() {
 
       // Redirect to login page
       router.push("/login")
-    } catch (error: any) {
-      console.error('Signup error:', error)
+    } catch (error) {
+      console.error("Signup error:", error)
       toast({
         title: "Error",
-        description: error.message || "An error occurred during signup. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create account",
         variant: "destructive",
+        duration: 6000,
       })
     } finally {
       setIsLoading(false)
