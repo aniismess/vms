@@ -45,7 +45,12 @@ export default function SignupPage() {
         return
       }
 
-      // Sign up the user - the trigger will handle admin creation
+      // Check if this is the first user
+      const { count } = await supabase
+        .from('admin_users')
+        .select('*', { count: 'exact', head: true })
+
+      // Sign up the user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -82,6 +87,24 @@ export default function SignupPage() {
         throw authError
       }
 
+      // If this is the first user, add them to admin_users
+      if (count === 0 && authData.user) {
+        const { error: adminError } = await supabase
+          .from('admin_users')
+          .insert([
+            {
+              id: authData.user.id,
+              email: authData.user.email,
+              created_by: authData.user.id
+            }
+          ])
+
+        if (adminError) {
+          console.error('Error creating admin user:', adminError)
+          // Don't throw the error, just log it
+        }
+      }
+
       toast({
         title: "Success!",
         description: "Account created successfully. Please check your email to verify your account.",
@@ -89,13 +112,12 @@ export default function SignupPage() {
 
       // Redirect to login page
       router.push("/login")
-    } catch (error) {
-      console.error("Signup error:", error)
+    } catch (error: any) {
+      console.error('Signup error:', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create account",
+        description: error.message || "An error occurred during signup. Please try again.",
         variant: "destructive",
-        duration: 6000,
       })
     } finally {
       setIsLoading(false)
