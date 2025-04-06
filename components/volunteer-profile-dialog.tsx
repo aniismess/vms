@@ -95,35 +95,45 @@ export function VolunteerProfileDialog({
 
   const handleFieldChange = (field: string, value: any) => {
     setEditedVolunteer(prev => {
-      const updated = { ...prev, [field]: value }
-      // Show real-time validation feedback for specific fields
-      if (field === 'mobile_number' && value && !/^\d{10}$/.test(value)) {
-        toast({
-          title: "Invalid Mobile Number",
-          description: "Please enter a valid 10-digit mobile number.",
-          variant: "destructive",
-          duration: 3000,
-        })
-      }
-      if (field === 'aadhar_number' && value && !/^\d{12}$/.test(value)) {
-        toast({
-          title: "Invalid Aadhar Number",
-          description: "Please enter a valid 12-digit Aadhar number.",
-          variant: "destructive",
-          duration: 3000,
-        })
-      }
-      if (field === 'age' && (parseInt(value) < 18 || parseInt(value) > 100)) {
-        toast({
-          title: "Invalid Age",
-          description: "Age must be between 18 and 100 years.",
-          variant: "destructive",
-          duration: 3000,
-        })
-      }
-      return updated
-    })
-  }
+      if (!prev) return prev;
+      return { ...prev, [field]: value };
+    });
+
+    // Validate the field value after state update
+    switch (field) {
+      case 'mobile_number':
+        if (value && !/^\d{10}$/.test(value)) {
+          toast({
+            title: "Invalid Mobile Number",
+            description: "Please enter a valid 10-digit mobile number.",
+            variant: "destructive",
+            duration: 3000,
+          });
+        }
+        break;
+      case 'aadhar_number':
+        if (value && !/^\d{12}$/.test(value)) {
+          toast({
+            title: "Invalid Aadhar Number",
+            description: "Please enter a valid 12-digit Aadhar number.",
+            variant: "destructive",
+            duration: 3000,
+          });
+        }
+        break;
+      case 'age':
+        const ageNum = parseInt(value);
+        if (value && (isNaN(ageNum) || ageNum < 18 || ageNum > 100)) {
+          toast({
+            title: "Invalid Age",
+            description: "Age must be between 18 and 100 years.",
+            variant: "destructive",
+            duration: 3000,
+          });
+        }
+        break;
+    }
+  };
 
   if (!volunteer || !editedVolunteer) return null
 

@@ -3,12 +3,12 @@
 import React, { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/auth-context"
 import { deleteVolunteerFromDb, cancelVolunteerInDb } from "@/lib/supabase-service"
-import { Loader2, MoreHorizontal, Plus, UserX, Search } from "lucide-react"
+import { Loader2, MoreHorizontal, Plus, UserX, Search, Download } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { CancelVolunteerForm } from "@/components/cancel-volunteer-form"
 import { ExcelUpload } from "@/components/excel-upload"
@@ -233,11 +233,14 @@ export default function VolunteersPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Volunteers</h1>
-        <div className="flex space-x-2">
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Volunteers</h1>
+          <p className="text-muted-foreground">Manage and track volunteer information</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <Link href="/volunteers/new">
-            <Button>
+            <Button className="bg-sai-orange hover:bg-sai-orange-dark text-white">
               <Plus className="mr-2 h-4 w-4" />
               Add Volunteer
             </Button>
@@ -247,19 +250,34 @@ export default function VolunteersPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Cancel Volunteer</h2>
-          <CancelVolunteerForm token="" onSuccess={handleRegister} dataSource="supabase" />
-        </div>
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Upload Volunteer Data</h2>
-          <ExcelUpload onSuccess={handleRegister} />
-        </div>
+        <Card className="border-sai-orange/20 hover:border-sai-orange/30 transition-all duration-300 hover:shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserX className="h-5 w-5 text-red-500" />
+              Cancel Volunteer
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CancelVolunteerForm token="" onSuccess={handleRegister} dataSource="supabase" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-sai-orange/20 hover:border-sai-orange/30 transition-all duration-300 hover:shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5 text-blue-500" />
+              Upload Volunteer Data
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ExcelUpload onSuccess={handleRegister} />
+          </CardContent>
+        </Card>
       </div>
 
-      <Card className="border-sai-orange/20">
-        <div className="p-4 border-b border-sai-orange/20">
-          <div className="flex items-center gap-4">
+      <Card className="border-sai-orange/20 hover:border-sai-orange/30 transition-all duration-300 hover:shadow-lg">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -281,89 +299,94 @@ export default function VolunteersPage() {
               </SelectContent>
             </Select>
           </div>
-        </div>
+        </CardHeader>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Mobile</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>District</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredVolunteers.length === 0 ? (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  No volunteers found
-                </TableCell>
+                <TableHead>ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Mobile</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>District</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ) : (
-              filteredVolunteers.map((volunteer) => (
-                <TableRow
-                  key={volunteer.sai_connect_id}
-                  className={cn(
-                    "cursor-pointer hover:bg-accent/50 transition-colors",
-                    {
-                      "bg-red-50": volunteer.is_cancelled === 'yes',
-                      "bg-blue-50": volunteer.registered_volunteers && volunteer.is_cancelled !== 'yes',
-                      "bg-green-50": !volunteer.registered_volunteers && volunteer.is_cancelled !== 'yes'
-                    }
-                  )}
-                  onClick={() => handleVolunteerClick(volunteer)}
-                >
-                  <TableCell>{volunteer.sai_connect_id}</TableCell>
-                  <TableCell>{volunteer.full_name}</TableCell>
-                  <TableCell>{volunteer.mobile_number || "N/A"}</TableCell>
-                  <TableCell>
-                    {volunteer.is_cancelled === 'yes' ? (
-                      <Badge variant="destructive">Cancelled</Badge>
-                    ) : volunteer.registered_volunteers ? (
-                      <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">Registered</Badge>
-                    ) : (
-                      <Badge variant="default" className="bg-green-500 hover:bg-green-600">Active</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{volunteer.sss_district || "N/A"}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCancel(volunteer.sai_connect_id)
-                          }}
-                          disabled={volunteer.is_cancelled === 'yes'}
-                          className="text-red-500 focus:text-red-500"
-                        >
-                          Cancel Volunteer
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDelete(volunteer.sai_connect_id)
-                          }}
-                          className="text-red-500 focus:text-red-500"
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            </TableHeader>
+            <TableBody>
+              {filteredVolunteers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Search className="h-8 w-8" />
+                      <p>No volunteers found</p>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filteredVolunteers.map((volunteer) => (
+                  <TableRow
+                    key={volunteer.sai_connect_id}
+                    className={cn(
+                      "cursor-pointer transition-colors",
+                      {
+                        "hover:bg-red-50/50": volunteer.is_cancelled === 'yes',
+                        "hover:bg-blue-50/50": volunteer.registered_volunteers && volunteer.is_cancelled !== 'yes',
+                        "hover:bg-green-50/50": !volunteer.registered_volunteers && volunteer.is_cancelled !== 'yes'
+                      }
+                    )}
+                    onClick={() => handleVolunteerClick(volunteer)}
+                  >
+                    <TableCell className="font-medium">{volunteer.sai_connect_id}</TableCell>
+                    <TableCell className="font-medium">{volunteer.full_name}</TableCell>
+                    <TableCell>{volunteer.mobile_number || "N/A"}</TableCell>
+                    <TableCell>
+                      {volunteer.is_cancelled === 'yes' ? (
+                        <Badge variant="destructive" className="bg-red-500 hover:bg-red-600">Cancelled</Badge>
+                      ) : volunteer.registered_volunteers ? (
+                        <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">Registered</Badge>
+                      ) : (
+                        <Badge variant="default" className="bg-green-500 hover:bg-green-600">Active</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>{volunteer.sss_district || "N/A"}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleCancel(volunteer.sai_connect_id)
+                            }}
+                            disabled={volunteer.is_cancelled === 'yes'}
+                            className="text-red-500 focus:text-red-500"
+                          >
+                            Cancel Volunteer
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(volunteer.sai_connect_id)
+                            }}
+                            className="text-red-500 focus:text-red-500"
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
 
       <VolunteerProfileDialog
