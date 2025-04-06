@@ -45,14 +45,7 @@ export default function SignupPage() {
         return
       }
 
-      // Check if this is the first user
-      const { count } = await supabase
-        .from('admin_users')
-        .select('*', { count: 'exact', head: true })
-
-      const isFirstUser = count === 0
-
-      // Sign up the user
+      // Sign up the user - the trigger will handle admin creation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -60,35 +53,19 @@ export default function SignupPage() {
           data: {
             full_name: fullName,
           },
-        },
+          emailRedirectTo: `${window.location.origin}/login`
+        }
       })
 
       if (authError) throw authError
 
-      if (authData.user) {
-        // If this is the first user, make them an admin
-        if (isFirstUser) {
-          const { error: adminError } = await supabase
-            .from('admin_users')
-            .insert([
-              {
-                id: authData.user.id,
-                email: authData.user.email,
-                created_by: authData.user.id,
-              },
-            ])
+      toast({
+        title: "Success!",
+        description: "Account created successfully. Please check your email to verify your account.",
+      })
 
-          if (adminError) throw adminError
-        }
-
-        toast({
-          title: "Success!",
-          description: "Account created successfully. Please check your email to verify your account.",
-        })
-
-        // Redirect to login page
-        router.push("/login")
-      }
+      // Redirect to login page
+      router.push("/login")
     } catch (error) {
       console.error("Signup error:", error)
       toast({
