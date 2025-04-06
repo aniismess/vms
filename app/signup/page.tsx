@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { supabase } from "@/lib/supabase"
 import { Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
+import Link from "next/link"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -162,7 +163,7 @@ export default function SignupPage() {
                 <p className="text-sm text-muted-foreground">Password must be at least 6 characters long</p>
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col space-y-4">
               <Button
                 type="submit"
                 className="w-full bg-sai-orange hover:bg-sai-orange-dark"
@@ -177,6 +178,12 @@ export default function SignupPage() {
                   "Create Account"
                 )}
               </Button>
+              <p className="text-center text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link href="/login" className="text-sai-orange hover:text-sai-orange-dark">
+                  Sign in
+                </Link>
+              </p>
             </CardFooter>
           </form>
         </Card>
