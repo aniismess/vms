@@ -281,29 +281,6 @@ export default function VolunteerDetailsPage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="sevadal" 
-                    checked={editedVolunteer?.sevadal_training_certificate === 'yes'} 
-                    onCheckedChange={(checked) => setEditedVolunteer({ ...editedVolunteer, sevadal_training_certificate: checked ? 'yes' : 'no' })}
-                    disabled={!isEditing}
-                    className="data-[state=checked]:bg-sai-orange"
-                  />
-                  <Label htmlFor="sevadal">Sevadal Training Certificate</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="past-service" 
-                    checked={editedVolunteer?.past_prashanti_service === 'yes'} 
-                    onCheckedChange={(checked) => setEditedVolunteer({ ...editedVolunteer, past_prashanti_service: checked ? 'yes' : 'no' })}
-                    disabled={!isEditing}
-                    className="data-[state=checked]:bg-sai-orange"
-                  />
-                  <Label htmlFor="past-service">Past Prashanti Service</Label>
-                </div>
-              </div>
-
               {volunteer.registered_volunteers && (
                 <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
                   <div className="flex items-center gap-2 text-green-600 mb-2">

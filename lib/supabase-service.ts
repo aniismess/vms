@@ -118,36 +118,59 @@ export async function getVolunteerStats() {
 }
 
 export async function createVolunteerInDb(volunteer: Omit<VolunteerData, 'registered_volunteers'>) {
-  const { is_cancelled, ...rest } = volunteer;
+  console.log('Original volunteer data:', JSON.stringify(volunteer, null, 2));
 
-  // Helper function to convert to YesNoType
-  const toYesNo = (value: any): YesNoType => {
-    if (typeof value === 'boolean') {
-      return value ? 'yes' : 'no';
+  // Define the columns we want to insert and select
+  const columns = [
+    'sai_connect_id',
+    'full_name',
+    'age',
+    'mobile_number',
+    'aadhar_number',
+    'sss_district',
+    'gender',
+    'samiti_or_bhajan_mandli',
+    'education',
+    'special_qualifications',
+    'serial_number',
+    'prashanti_arrival',
+    'prashanti_departure',
+    'duty_point',
+    'last_service_location',
+    'other_service_location',
+    'created_by_id',
+    'is_cancelled'
+  ];
+
+  // Create a new object with only the allowed fields
+  const cleanVolunteer = {} as any;
+  columns.forEach(column => {
+    if (column in volunteer) {
+      cleanVolunteer[column] = volunteer[column as keyof typeof volunteer];
     }
-    if (value === 'yes') return 'yes';
-    return 'no';
-  };
+  });
 
-  // Now create the formatted volunteer with explicit conversions
-  const formattedVolunteer = {
-    ...rest,
-    is_cancelled: toYesNo(is_cancelled)
-  };
+  // Ensure is_cancelled is properly formatted
+  cleanVolunteer.is_cancelled = volunteer.is_cancelled === 'yes' ? 'yes' : 'no';
 
-  console.log('Creating volunteer with formatted data:', formattedVolunteer);
+  console.log('Clean volunteer data being sent to Supabase:', JSON.stringify(cleanVolunteer, null, 2));
 
-  const { data, error } = await supabase
-    .from("volunteers_volunteers")
-    .insert([formattedVolunteer])
-    .select();
+  try {
+    const { data, error } = await supabase
+      .from("volunteers_volunteers")
+      .insert([cleanVolunteer])
+      .select(columns.join(', '));
 
-  if (error) {
-    console.error("Error creating volunteer:", error);
+    if (error) {
+      console.error("Error creating volunteer:", error);
+      throw error;
+    }
+
+    return data?.[0];
+  } catch (error) {
+    console.error("Error in createVolunteerInDb:", error);
     throw error;
   }
-
-  return data?.[0];
 }
 
 export async function updateVolunteerInDb(id: string, updates: Partial<VolunteerData>) {
