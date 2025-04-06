@@ -150,10 +150,9 @@ export default function NewVolunteerPage() {
         samiti_or_bhajan_mandli: samiti,
         education: education,
         special_qualifications: qualifications || null,
-        // Convert boolean values to YesNoType strings
-        sevadal_training_certificate: (sevadalTraining ? 'yes' : 'no') as YesNoType,
-        past_prashanti_service: (pastService ? 'yes' : 'no') as YesNoType,
-        is_cancelled: 'no' as YesNoType,
+        sevadal_training_certificate: sevadalTraining ? 'yes' : 'no',
+        past_prashanti_service: 'no',
+        is_cancelled: 'no',
         serial_number: null,
         prashanti_arrival: null,
         prashanti_departure: null,

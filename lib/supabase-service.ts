@@ -43,7 +43,8 @@ export async function getVolunteers(): Promise<VolunteerData[]> {
       registered_volunteers!left (
         sai_connect_id,
         batch,
-        service_location
+        service_location,
+        created_at
       )
     `)
     .order("created_at", { ascending: false })

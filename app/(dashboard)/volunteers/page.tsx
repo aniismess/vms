@@ -45,9 +45,6 @@ export default function VolunteersPage() {
       if (statusFilter === "cancelled" && volunteer.is_cancelled !== 'yes') {
         return false
       }
-      if (statusFilter === "all") {
-        return true
-      }
 
       // Search filter
       const searchFields = [
@@ -345,7 +342,7 @@ export default function VolunteersPage() {
                             e.stopPropagation()
                             handleCancel(volunteer.sai_connect_id)
                           }}
-                          disabled={volunteer.is_cancelled}
+                          disabled={volunteer.is_cancelled === 'yes'}
                           className="text-red-500 focus:text-red-500"
                         >
                           Cancel Volunteer
