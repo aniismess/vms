@@ -53,166 +53,89 @@ export function Sidebar() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-4">
           <div className="flex items-center justify-between">
-            <motion.div 
-              className="flex items-center space-x-6"
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.2 }}
-            >
-              <motion.div 
-                className="relative w-16 h-16 bg-white rounded-full overflow-hidden border-2 border-white/30 shadow-lg hover:border-white/50 transition-all duration-300"
-                whileHover={{ rotate: 5 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Image
-                  src="https://ssssompcg.org/assets/images/sd5-464x464.jpg"
-                  alt="Sri Sathya Sai Logo"
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              </motion.div>
-              <motion.div 
-                className="flex flex-col"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <h1 className="text-2xl font-bold font-playfair tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80">
-                  Sri Sathya Sai Seva Organisations
-                </h1>
-                <p className="text-base opacity-90 font-medium text-white/90">Love All Serve All - Make a Difference</p>
-              </motion.div>
-            </motion.div>
-            <div className="flex items-center gap-2">
-              <ThemeToggle variant="ghost" />
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <Sheet open={isOpen} onOpenChange={setIsOpen}>
                 <SheetTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-white hover:bg-white/10 hover:text-white border border-white/20 hover:border-white/40 transition-all duration-200"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Menu className="h-6 w-6" />
-                    <span className="sr-only">Toggle Menu</span>
+                  <Button variant="ghost" size="icon" className="md:hidden">
+                    <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[280px] sm:w-[320px] bg-background/95 backdrop-blur-sm border-r border-sai-orange/20">
-                  <SheetHeader>
-                    <SheetTitle className="text-xl font-bold">
-                      <div className="flex flex-col">
-                        <span className="font-playfair bg-clip-text text-transparent bg-gradient-to-r from-sai-orange to-sai-orange-dark">
-                          Volunteer Management
-                        </span>
-                        <span className="text-sm font-medium font-hindi text-muted-foreground">स्वयंसेवक प्रबंधन</span>
-                      </div>
-                    </SheetTitle>
-                  </SheetHeader>
-                  <div className="flex flex-col h-full py-4">
-                    <div className="px-3 py-2">
-                      {user && (
-                        <motion.div 
-                          className="flex flex-col p-3 rounded-lg bg-sai-orange/5 border border-sai-orange/10"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.3 }}
-                        >
-                          <span className="text-sm font-medium text-sai-orange">{user?.email}</span>
-                          <span className="text-sm font-medium font-hindi text-muted-foreground">प्रशासक</span>
-                        </motion.div>
-                      )}
+                <SheetContent side="left" className="w-[240px] sm:w-[300px] p-0">
+                  <div className="flex flex-col h-full">
+                    <div className="p-4 border-b">
+                      <h2 className="text-lg font-semibold">Navigation</h2>
                     </div>
-                    <nav className="flex-1 space-y-1 px-2">
-                      {navItems.map((item, index) => (
-                        <motion.div
-                          key={index}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.1 * index }}
+                    <nav className="flex-1 p-2">
+                      {navItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setIsOpen(false)}
+                          className={cn(
+                            "flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-colors",
+                            pathname === item.href
+                              ? "bg-sai-orange/10 text-sai-orange"
+                              : "hover:bg-sai-orange/5"
+                          )}
                         >
-                          <Link
-                            href={item.href}
-                            onClick={() => setIsOpen(false)}
-                            className={cn(
-                              "flex flex-col gap-0.5 rounded-lg px-3 py-2 text-base font-medium transition-all duration-200",
-                              pathname === item.href 
-                                ? "bg-sai-orange/10 text-sai-orange shadow-sm" 
-                                : "text-muted-foreground hover:bg-sai-orange/5 hover:text-sai-orange"
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              <item.icon className="h-5 w-5" />
-                              <div className="flex flex-col">
-                                <span>{item.title}</span>
-                                <span className="text-sm font-medium font-hindi text-muted-foreground">{item.hindiTitle}</span>
-                              </div>
-                            </div>
-                          </Link>
-                        </motion.div>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
                       ))}
                     </nav>
-                    <div className="mt-auto p-4">
-                      <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                    <div className="p-4 border-t">
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={handleLogout}
                       >
-                        <Button 
-                          variant="outline" 
-                          className="w-full justify-start gap-2 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors duration-200" 
-                          onClick={handleLogout}
-                        >
-                          <LogOut className="h-4 w-4" />
-                          <div className="flex flex-col">
-                            <span>Logout</span>
-                            <span className="text-sm font-medium font-hindi text-muted-foreground">लॉग आउट</span>
-                          </div>
-                        </Button>
-                      </motion.div>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Logout
+                      </Button>
                     </div>
                   </div>
                 </SheetContent>
               </Sheet>
+              <div className="flex flex-col">
+                <h1 className="text-lg sm:text-xl font-bold">Sri Sathya Sai Seva Organisation</h1>
+                <p className="text-sm text-white/80">Volunteer Management System</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden md:flex"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Navigation Menu */}
-      <motion.div 
-        className="border-b bg-white/95 backdrop-blur-sm shadow-sm"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <div className="container mx-auto px-4">
-          <nav className="flex space-x-8 py-3">
-            {navItems.map((item, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-              >
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-2 text-base font-medium transition-all duration-200",
-                    pathname === item.href 
-                      ? "text-sai-orange font-semibold" 
-                      : "text-muted-foreground hover:text-sai-orange"
-                  )}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.title}</span>
-                </Link>
-              </motion.div>
-            ))}
-          </nav>
-        </div>
-      </motion.div>
+      {/* Desktop Navigation */}
+      <nav className="hidden md:flex items-center space-x-4 px-4 py-2 bg-white border-b">
+        {navItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              "flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-colors",
+              pathname === item.href
+                ? "bg-sai-orange/10 text-sai-orange"
+                : "hover:bg-sai-orange/5"
+            )}
+          >
+            <item.icon className="h-4 w-4" />
+            <span>{item.title}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   )
 }
