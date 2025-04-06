@@ -61,25 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Authentication failed: No user data returned')
       }
 
-      // Check if user exists in admin_users table
-      const { data: adminData, error: adminError } = await supabase
-        .from('admin_users')
-        .select('id')
-        .eq('id', data.user.id)
-        .single()
-
-      if (adminError) {
-        console.error('Admin check error:', adminError)
-        await supabase.auth.signOut()
-        throw new Error('Error checking admin privileges')
-      }
-
-      if (!adminData) {
-        console.error('User not found in admin_users table')
-        await supabase.auth.signOut()
-        throw new Error('Unauthorized access. Admin privileges required.')
-      }
-
       console.log('Login successful for user:', data.user.email)
       setUser(data.user)
       router.refresh()
@@ -94,33 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            is_admin: true
-          }
-        }
       })
 
       if (error) throw error
-
-      if (data.user) {
-        // Add to admin_users table
-        const { error: adminError } = await supabase
-          .from('admin_users')
-          .insert([
-            {
-              id: data.user.id,
-              email: data.user.email
-            }
-          ])
-
-        if (adminError) {
-          // If failed to add to admin_users, delete the auth user
-          await supabase.auth.admin.deleteUser(data.user.id)
-          throw adminError
-        }
-      }
-
       return data
     } catch (error: any) {
       throw error

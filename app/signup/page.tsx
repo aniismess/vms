@@ -45,7 +45,7 @@ export default function SignupPage() {
         return
       }
 
-      // Sign up the user - the trigger will handle admin creation
+      // Sign up the user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -80,31 +80,6 @@ export default function SignupPage() {
           return
         }
         throw authError
-      }
-
-      // Check if this is the first user and add to admin_users if needed
-      if (authData.user) {
-        const { count } = await supabase
-          .from('admin_users')
-          .select('*', { count: 'exact', head: true })
-
-        if (count === 0) {
-          // This is the first user, add them to admin_users
-          const { error: adminError } = await supabase
-            .from('admin_users')
-            .insert([
-              {
-                id: authData.user.id,
-                email: authData.user.email,
-                created_at: new Date().toISOString()
-              }
-            ])
-
-          if (adminError) {
-            console.error('Error adding first admin:', adminError)
-            // Don't throw here, as the trigger might have already handled it
-          }
-        }
       }
 
       toast({
