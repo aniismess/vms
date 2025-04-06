@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { cookies } from 'next/headers'
+import { confirmAdminSchema } from '@/lib/validations/admin'
 
 export async function GET(request: Request) {
   try {
@@ -8,7 +9,9 @@ export async function GET(request: Request) {
     const token = searchParams.get('token')
     const email = searchParams.get('email')
 
-    if (!token || !email) {
+    // Validate input using Zod
+    const validationResult = confirmAdminSchema.safeParse({ email, token })
+    if (!validationResult.success) {
       return new Response(
         `
         <html>
@@ -21,7 +24,7 @@ export async function GET(request: Request) {
             <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
               <h1 style="color: #FF6B00;">Invalid Request</h1>
               <p style="color: #666;">Missing required parameters.</p>
-              <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
+              <a href="https://ssssovms.vercel.app/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
             </div>
           </body>
         </html>
@@ -171,7 +174,7 @@ export async function GET(request: Request) {
       }
     )
   } catch (error) {
-    console.error('Error confirming admin:', error)
+    console.error('Admin confirmation error:', error)
     return new Response(
       `
       <html>
@@ -184,7 +187,7 @@ export async function GET(request: Request) {
           <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
             <h1 style="color: #FF6B00;">Error</h1>
             <p style="color: #666;">An error occurred while confirming your admin account. Please try again or contact support.</p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
+            <a href="https://ssssovms.vercel.app/login" style="display: inline-block; background-color: #FF6B00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 20px;">Go to Login</a>
           </div>
         </body>
       </html>

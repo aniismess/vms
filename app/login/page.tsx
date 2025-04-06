@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/contexts/auth-context"
-import { LoaderCircle, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react"
+import { LoaderCircle, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -251,29 +251,26 @@ export default function LoginPage() {
                   {error}
                 </motion.p>
               )}
-              <Button 
-                type="submit" 
-                className="w-full bg-sai-orange hover:bg-sai-orange-dark transition-colors duration-200" 
-                disabled={isSubmitting}
+              <Button
+                type="submit"
+                className="w-full bg-sai-orange hover:bg-sai-orange-dark"
+                disabled={isLoading}
               >
-                {isSubmitting ? (
+                {isLoading ? (
                   <>
-                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Signing in...
                   </>
                 ) : (
                   "Sign In"
                 )}
               </Button>
-              <div className="text-center text-sm mt-2">
+              <p className="text-center text-sm text-muted-foreground">
                 Don't have an account?{" "}
-                <Link 
-                  href="/signup" 
-                  className="text-sai-orange hover:text-sai-orange-dark font-medium transition-colors duration-200"
-                >
+                <Link href="/signup" className="text-sai-orange hover:text-sai-orange-dark">
                   Sign up
                 </Link>
-              </div>
+              </p>
             </CardContent>
           </form>
           <CardFooter className="flex flex-col space-y-2 text-center text-sm text-muted-foreground">

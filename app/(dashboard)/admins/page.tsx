@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Label } from "@/components/ui/label"
 import { formatDistanceToNow } from "date-fns"
 import { createHash, randomBytes } from 'crypto'
+import { createAdminSchema, adminUserSchema, pendingAdminUserSchema } from '@/lib/validations/admin'
 
 interface Admin {
   id: string
@@ -86,7 +87,17 @@ export default function AdminsPage() {
 
       if (error) throw error
 
-      setAdmins(data || [])
+      // Validate admin data using Zod
+      const validatedAdmins = data.map(admin => {
+        const result = adminUserSchema.safeParse(admin)
+        if (!result.success) {
+          console.error('Invalid admin data:', result.error)
+          return null
+        }
+        return result.data
+      }).filter(Boolean) as Admin[]
+
+      setAdmins(validatedAdmins)
     } catch (error: any) {
       console.error("Error fetching admins:", error)
       toast({
@@ -107,7 +118,18 @@ export default function AdminsPage() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setPendingAdmins(data || [])
+
+      // Validate pending admin data using Zod
+      const validatedPendingAdmins = data.map(pending => {
+        const result = pendingAdminUserSchema.safeParse(pending)
+        if (!result.success) {
+          console.error('Invalid pending admin data:', result.error)
+          return null
+        }
+        return result.data
+      }).filter(Boolean) as PendingAdmin[]
+
+      setPendingAdmins(validatedPendingAdmins)
     } catch (error) {
       console.error('Error fetching pending admins:', error)
       toast({
@@ -184,22 +206,16 @@ export default function AdminsPage() {
       return
     }
 
-    // Validate email
-    if (!validateEmail(newAdminEmail)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
-        variant: "destructive",
-      })
-      setIsAddingAdmin(false)
-      return
-    }
+    // Validate input using Zod
+    const validationResult = createAdminSchema.safeParse({
+      email: newAdminEmail,
+      password: newAdminPassword
+    })
 
-    // Validate password
-    if (!validatePassword(newAdminPassword)) {
+    if (!validationResult.success) {
       toast({
-        title: "Invalid Password",
-        description: "Password must be at least 6 characters long.",
+        title: "Invalid Input",
+        description: validationResult.error.errors[0].message,
         variant: "destructive",
       })
       setIsAddingAdmin(false)
