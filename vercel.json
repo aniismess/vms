@@ -9,12 +9,6 @@
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "@next_public_supabase_url",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@next_public_supabase_anon_key",
-    "SUPABASE_SERVICE_KEY": "@supabase_service_key",
-    "SMTP_HOST": "@smtp_host",
-    "SMTP_PORT": "@smtp_port",
-    "SMTP_USER": "@smtp_user",
-    "SMTP_PASSWORD": "@smtp_password",
-    "SMTP_FROM": "@smtp_from",
-    "NEXT_PUBLIC_APP_URL": "@next_public_app_url"
+    "SUPABASE_SERVICE_KEY": "@supabase_service_key"
   }
 } 
