@@ -304,15 +304,19 @@ export default function VolunteersPage() {
                       <TableCell className="hidden sm:table-cell">
                         <Badge
                           variant={
-                            volunteer.status === "cancelled"
+                            volunteer.is_cancelled === 'yes'
                               ? "destructive"
-                              : volunteer.status === "registered"
+                              : volunteer.registered_volunteers
                               ? "default"
                               : "secondary"
                           }
                           className="hover:opacity-80 transition-opacity"
                         >
-                          {volunteer.status.charAt(0).toUpperCase() + volunteer.status.slice(1)}
+                          {volunteer.is_cancelled === 'yes'
+                            ? "Cancelled"
+                            : volunteer.registered_volunteers
+                            ? "Registered"
+                            : "Active"}
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">{volunteer.sss_district}</TableCell>
@@ -325,7 +329,7 @@ export default function VolunteersPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {volunteer.status === "active" && (
+                          {!volunteer.is_cancelled && !volunteer.registered_volunteers && (
                             <Button
                               variant="ghost"
                               size="icon"
