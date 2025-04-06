@@ -246,40 +246,65 @@ export default function VolunteersPage() {
                 Add Volunteer
               </Link>
             </Button>
+            <RegisterVolunteerForm onRegister={handleRegister} />
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Search Volunteers</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <UserX className="h-5 w-5 text-red-500" />
+                Cancel Volunteer
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  placeholder="Search by name, mobile, or ID..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1"
-                />
-                <Select
-                  value={statusFilter}
-                  onValueChange={setStatusFilter}
-                >
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                    <SelectItem value="registered">Registered</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <CancelVolunteerForm token="" onSuccess={handleRegister} dataSource="supabase" />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="h-5 w-5 text-blue-500" />
+                Upload Volunteer Data
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ExcelUpload onSuccess={handleRegister} />
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Search Volunteers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                placeholder="Search by name, mobile, or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1"
+              />
+              <Select
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="registered">Registered</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardContent className="p-0">
@@ -296,52 +321,77 @@ export default function VolunteersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredVolunteers.map((volunteer) => (
-                    <TableRow key={volunteer.sai_connect_id}>
-                      <TableCell className="font-medium">{volunteer.sai_connect_id}</TableCell>
-                      <TableCell>{volunteer.full_name}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{volunteer.mobile_number}</TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <Badge
-                          variant={
-                            volunteer.is_cancelled === 'yes'
-                              ? "destructive"
-                              : volunteer.registered_volunteers
-                              ? "default"
-                              : "secondary"
-                          }
-                          className="hover:opacity-80 transition-opacity"
-                        >
-                          {volunteer.is_cancelled === 'yes'
-                            ? "Cancelled"
-                            : volunteer.registered_volunteers
-                            ? "Registered"
-                            : "Active"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">{volunteer.sss_district}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleVolunteerClick(volunteer)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {!volunteer.is_cancelled && !volunteer.registered_volunteers && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleCancel(volunteer.sai_connect_id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
+                  {filteredVolunteers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <Search className="h-8 w-8" />
+                          <p>No volunteers found</p>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    filteredVolunteers.map((volunteer) => (
+                      <TableRow key={volunteer.sai_connect_id}>
+                        <TableCell className="font-medium">{volunteer.sai_connect_id}</TableCell>
+                        <TableCell>{volunteer.full_name}</TableCell>
+                        <TableCell className="hidden sm:table-cell">{volunteer.mobile_number}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge
+                            variant={
+                              volunteer.is_cancelled === 'yes'
+                                ? "destructive"
+                                : volunteer.registered_volunteers
+                                ? "default"
+                                : "secondary"
+                            }
+                            className="hover:opacity-80 transition-opacity"
+                          >
+                            {volunteer.is_cancelled === 'yes'
+                              ? "Cancelled"
+                              : volunteer.registered_volunteers
+                              ? "Registered"
+                              : "Active"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">{volunteer.sss_district}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleVolunteerClick(volunteer)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Open menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleCancel(volunteer.sai_connect_id)}
+                                  disabled={volunteer.is_cancelled === 'yes'}
+                                  className="text-red-500 focus:text-red-500"
+                                >
+                                  Cancel Volunteer
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDelete(volunteer.sai_connect_id)}
+                                  className="text-red-500 focus:text-red-500"
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
