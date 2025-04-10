@@ -42,7 +42,7 @@ export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps
   const [age, setAge] = useState('')
   const [batch, setBatch] = useState('')
   const [serviceLocation, setServiceLocation] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null) // Keep general error state for validation
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
@@ -66,18 +66,19 @@ export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
+    setError(null) // Clear general validation errors
 
+    // Perform client-side validation first
     if (!validateSaiConnectId(saiConnectId) || !validateAge(age) || !batch || !serviceLocation) {
-      if (!batch) setError('Please select a batch')
-      if (!serviceLocation) setError('Please select a service location')
+      if (!batch && !error) setError('Please select a batch') // Set error only if not already set
+      if (!serviceLocation && !error) setError('Please select a service location') // Set error only if not already set
       return
     }
 
     try {
       setIsSubmitting(true)
-      // Check if volunteer exists and is not cancelled
-      const { data: volunteers } = await supabase
+      // Check if volunteer exists and their status
+      const { data: volunteer } = await supabase
         .from('volunteers_volunteers')
         .select(`
           *,
@@ -90,21 +91,38 @@ export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps
         .eq('sai_connect_id', saiConnectId)
         .maybeSingle()
 
-      if (!volunteers) {
-        setError('Volunteer not found')
+      // Handle specific cases with toasts
+      if (!volunteer) {
+        toast({
+          title: "Registration Failed",
+          description: `Volunteer with SAI Connect ID ${saiConnectId} not found.`,
+          variant: "destructive",
+        })
+        setIsSubmitting(false) // Stop submission
         return
       }
 
-      if (volunteers.is_cancelled === 'yes') {
-        setError('Volunteer has been cancelled')
+      if (volunteer.is_cancelled === 'yes') {
+        toast({
+          title: "Registration Failed",
+          description: `Volunteer with SAI Connect ID ${saiConnectId} has been cancelled and cannot be registered.`,
+          variant: "destructive",
+        })
+        setIsSubmitting(false) // Stop submission
         return
       }
 
-      if (volunteers.registered_volunteers) {
-        setError('Volunteer is already registered')
+      if (volunteer.registered_volunteers) {
+        toast({
+          title: "Registration Failed",
+          description: `Volunteer with SAI Connect ID ${saiConnectId} is already registered.`,
+          variant: "destructive",
+        })
+        setIsSubmitting(false) // Stop submission
         return
       }
 
+      // If all checks pass, proceed with registration
       await registerVolunteer({
         sai_connect_id: saiConnectId,
         age: parseInt(age, 10),
@@ -115,6 +133,7 @@ export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps
       toast({
         title: "Success!",
         description: "Volunteer has been registered successfully.",
+        variant: "default", // Use default variant for success
       })
 
       onRegister()
@@ -122,12 +141,14 @@ export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps
       resetForm()
     } catch (err) {
       console.error('Error registering volunteer:', err)
+      // General catch-all error toast
       toast({
         title: "Error",
-        description: "Failed to register volunteer. Please try again.",
+        description: "An unexpected error occurred during registration. Please try again.",
         variant: "destructive",
       })
     } finally {
+      // Ensure isSubmitting is always set to false
       setIsSubmitting(false)
     }
   }
@@ -140,36 +161,11 @@ export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps
     setError(null)
   }
 
-  const fetchVolunteers = async () => {
-    try {
-      const { data: volunteers, error } = await supabase
-        .from("volunteers_volunteers")
-        .select(`
-          sai_connect_id,
-          full_name,
-          status,
-          registered_volunteers(batch, service_location)
-        `)
-
-      if (error) {
-        console.error("Error fetching volunteers:", error)
-        return []
-      }
-
-      return volunteers.map((volunteer) => ({
-        ...volunteer,
-        isRegistered: !!volunteer.registered_volunteers,
-        batch: volunteer.registered_volunteers?.[0]?.batch || null,
-        serviceLocation: volunteer.registered_volunteers?.[0]?.service_location || null,
-      }))
-    } catch (error) {
-      console.error("Error fetching volunteers:", error)
-      return []
-    }
-  }
+  // fetchVolunteers function seems unused in this component, can be removed if not needed elsewhere
+  // const fetchVolunteers = async () => { ... }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
       <DialogTrigger asChild>
         <Button>
           <UserPlus className="mr-2 h-4 w-4" />
@@ -191,7 +187,7 @@ export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps
               onChange={(e) => {
                 const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6)
                 setSaiConnectId(value)
-                setError(null)
+                setError(null) // Clear error on change
               }}
               maxLength={6}
               pattern="[0-9]{6}"
@@ -210,7 +206,7 @@ export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps
               onChange={(e) => {
                 const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 2)
                 setAge(value)
-                setError(null)
+                setError(null) // Clear error on change
               }}
               min="18"
               max="100"
@@ -233,7 +229,7 @@ export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="service-location">Service Location</Label>
+            <Label htmlFor="service-location">Past Seva Location</Label>
             <Select value={serviceLocation} onValueChange={(value) => { setServiceLocation(value); setError(null); }} required>
               <SelectTrigger id="service-location" className={error && error.includes('service location') ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Select service location" />
@@ -245,11 +241,12 @@ export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps
               </SelectContent>
             </Select>
           </div>
+          {/* Display general validation errors */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-sm text-red-500 flex items-center gap-2 bg-red-50 p-2 rounded"
+              className="text-sm text-red-500 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 p-2 rounded"
             >
               <AlertCircle className="h-4 w-4" />
               {error}

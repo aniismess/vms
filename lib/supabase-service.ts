@@ -320,3 +320,19 @@ export async function registerVolunteer(data: {
   return true
 }
 
+// New function combining stats and volunteer list fetching
+export async function getDashboardPageData() {
+  console.log('Fetching combined dashboard data...')
+  try {
+    const [stats, volunteers] = await Promise.all([
+      getVolunteerStats(),
+      getVolunteers()
+    ])
+    console.log('Combined data fetched:', { stats, volunteers: volunteers.length })
+    return { stats, volunteers }
+  } catch (error) {
+    console.error("Error fetching combined dashboard data:", error)
+    // Re-throw the error so React Query can handle it
+    throw error
+  }
+}

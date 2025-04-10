@@ -12,7 +12,8 @@ import { Loader2, Upload } from "lucide-react"
 import * as XLSX from "xlsx"
 import { supabase } from "@/lib/supabase"
 import { Progress } from "@/components/ui/progress"
-import { YesNoType } from "@/lib/types"
+// Removed unused YesNoType import
+import { UserRole } from "@/contexts/auth-context" // Import UserRole
 
 interface VolunteerExcelData {
   serial_number: string | null;
@@ -189,7 +190,7 @@ function validateVolunteerData(volunteer: Partial<VolunteerExcelData>, rowIndex:
   }
 
   // Age validation
-  if (volunteer.age !== null && (volunteer.age < 1 || volunteer.age > 99)) {
+  if (volunteer.age !== undefined && volunteer.age !== null && (isNaN(volunteer.age) || volunteer.age < 1 || volunteer.age > 99)) { // Added isNaN check
     // If age is invalid, set it to null
     console.warn(`Row ${rowIndex}: Invalid age "${volunteer.age}", setting to null`);
     volunteer.age = null;
@@ -219,28 +220,30 @@ type DatabaseFields = {
 
 // Add this function to filter and transform data
 function transformToDatabaseFormat(volunteer: Partial<VolunteerExcelData>): Partial<DatabaseFields> {
+  // Explicitly define fields that can be string | null | undefined and handle them
   const dbFields: Partial<DatabaseFields> = {
-    sai_connect_id: volunteer.sai_connect_id,
-    full_name: volunteer.full_name,
-    age: volunteer.age,
-    aadhar_number: volunteer.aadhar_number,
-    mobile_number: volunteer.mobile_number,
-    sss_district: volunteer.sss_district,
-    samiti_or_bhajan_mandli: volunteer.samiti_or_bhajan_mandli,
-    education: volunteer.education,
-    special_qualifications: volunteer.special_qualifications,
-    last_service_location: volunteer.last_service_location,
-    other_service_location: volunteer.other_service_location,
-    prashanti_arrival: volunteer.prashanti_arrival,
-    prashanti_departure: volunteer.prashanti_departure,
-    duty_point: volunteer.duty_point,
-    is_cancelled: volunteer.is_cancelled
+    sai_connect_id: volunteer.sai_connect_id, // Required, should not be null/undefined here
+    full_name: volunteer.full_name,       // Required, should not be null/undefined here
+    age: volunteer.age,                   // Optional number | null
+    aadhar_number: volunteer.aadhar_number ?? undefined, // Convert null to undefined if needed by DB type
+    mobile_number: volunteer.mobile_number ?? undefined, // Convert null to undefined
+    sss_district: volunteer.sss_district ?? undefined,   // Convert null to undefined
+    gender: volunteer.gender ?? undefined,             // Added gender, convert null to undefined
+    samiti_or_bhajan_mandli: volunteer.samiti_or_bhajan_mandli ?? undefined, // Convert null to undefined
+    education: volunteer.education ?? undefined,         // Convert null to undefined
+    special_qualifications: volunteer.special_qualifications ?? undefined, // Convert null to undefined
+    last_service_location: volunteer.last_service_location, // Already allows null
+    other_service_location: volunteer.other_service_location, // Already allows null
+    prashanti_arrival: volunteer.prashanti_arrival,       // Already allows null
+    prashanti_departure: volunteer.prashanti_departure,   // Already allows null
+    duty_point: volunteer.duty_point ?? undefined,         // Convert null to undefined
+    is_cancelled: volunteer.is_cancelled ?? false        // Default to false if null/undefined
   };
 
-  // Remove undefined and null values
+  // Remove only undefined values, keep nulls where allowed by DatabaseFields type
   return Object.fromEntries(
-    Object.entries(dbFields).filter(([_, value]) => value !== undefined && value !== null)
-  );
+    Object.entries(dbFields).filter(([_, value]) => value !== undefined)
+  ) as Partial<DatabaseFields>;
 }
 
 // Add this type for database headers
@@ -270,11 +273,19 @@ const databaseHeaders: DatabaseHeader[] = [
   { key: 'is_cancelled', label: 'Is Cancelled', required: false, type: 'boolean' }
 ];
 
-export function ExcelUpload({ onSuccess }: { onSuccess?: () => void }) {
+interface ExcelUploadProps {
+  onSuccess?: () => void;
+  userRole: UserRole; // Add userRole prop
+}
+
+export function ExcelUpload({ onSuccess, userRole }: ExcelUploadProps) { // Accept userRole
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const { toast } = useToast()
+
+  // Determine if the user can upload based on role
+  const canUpload = userRole === 'super_admin';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -297,6 +308,12 @@ export function ExcelUpload({ onSuccess }: { onSuccess?: () => void }) {
   }
 
   const handleUpload = async () => {
+    // Prevent upload if user doesn't have permission
+    if (!canUpload) {
+      toast({ title: "Permission Denied", description: "You do not have permission to upload data.", variant: "destructive" });
+      return;
+    }
+
     if (!file) {
       toast({
         title: "No file selected",
@@ -464,9 +481,10 @@ export function ExcelUpload({ onSuccess }: { onSuccess?: () => void }) {
       // Show deduplication results
       if (stats.duplicateRows > 0) {
         toast({
-          title: "Duplicate Records Found",
-          description: `Found ${stats.duplicateRows} duplicate records out of ${stats.totalRows} total records. ${stats.uniqueRows} unique records will be uploaded.`,
-          variant: "warning",
+          title: "Duplicate Records Found (Warning)", // Adjusted title
+          description: `Found ${stats.duplicateRows} duplicate records out of ${stats.totalRows} total records. ${stats.uniqueRows} unique records will be uploaded. Check console for duplicate IDs.`,
+          variant: "default", // Changed variant from warning to default
+          duration: 5000 // Increased duration
         })
         console.log("Duplicate SAI Connect IDs:", stats.duplicateIds)
       }
@@ -577,7 +595,7 @@ export function ExcelUpload({ onSuccess }: { onSuccess?: () => void }) {
             type="file" 
             accept=".xlsx,.xls,.csv" 
             onChange={handleFileChange} 
-            disabled={isUploading} 
+            disabled={isUploading || !canUpload} // Disable if uploading or no permission
           />
         </div>
         {isUploading && (
@@ -589,7 +607,7 @@ export function ExcelUpload({ onSuccess }: { onSuccess?: () => void }) {
         )}
       </CardContent>
       <CardFooter>
-        <Button onClick={handleUpload} disabled={!file || isUploading} className="w-full">
+        <Button onClick={handleUpload} disabled={!file || isUploading || !canUpload} className="w-full" title={!canUpload ? "Permission Denied" : ""}> {/* Disable button and add title */}
           {isUploading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -606,4 +624,3 @@ export function ExcelUpload({ onSuccess }: { onSuccess?: () => void }) {
     </Card>
   )
 }
-

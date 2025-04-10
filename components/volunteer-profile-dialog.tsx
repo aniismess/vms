@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Edit2, Save, X, CheckCircle2, UserCheck } from "lucide-react"
 import { updateVolunteerInDb } from "@/lib/supabase-service"
 import type { VolunteerData } from "@/lib/types"
+import { UserRole } from "@/contexts/auth-context" // Import UserRole
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const SSS_DISTRICTS = [
@@ -39,18 +40,23 @@ interface VolunteerProfileDialogProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   onUpdate: () => void
+  userRole: UserRole // Add userRole prop
 }
 
 export function VolunteerProfileDialog({
   volunteer,
   isOpen,
   onOpenChange,
-  onUpdate
+  onUpdate,
+  userRole // Accept userRole prop
 }: VolunteerProfileDialogProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedVolunteer, setEditedVolunteer] = useState<VolunteerData | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
+
+  // Determine if the current user can edit based on role
+  const canEdit = userRole === 'super_admin';
 
   useEffect(() => {
     if (volunteer) {
@@ -58,11 +64,22 @@ export function VolunteerProfileDialog({
         ...volunteer,
         age: volunteer.age || null,
       })
+      // Reset editing state when volunteer changes
+      setIsEditing(false);
     }
   }, [volunteer])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
+    // Double-check edit permission before submitting
+    if (!canEdit) {
+        toast({ title: "Permission Denied", description: "You do not have permission to edit profiles.", variant: "destructive" });
+        return;
+    }
+    if (!volunteer || !editedVolunteer) {
+      toast({ title: "Error", description: "Volunteer data is missing.", variant: "destructive" });
+      return;
+    }
     setIsSubmitting(true)
 
     try {
@@ -75,16 +92,17 @@ export function VolunteerProfileDialog({
       onUpdate?.()
       toast({
         title: "Profile Updated Successfully",
-        description: `${editedVolunteer.full_name}'s profile has been updated with the latest information.`,
+        description: `${editedVolunteer.full_name}'s profile has been updated.`,
         variant: "default",
         duration: 3000,
       })
-      onOpenChange(false)
+      setIsEditing(false); // Exit editing mode on successful save
+      onOpenChange(false); // Close dialog
     } catch (error) {
       console.error("Error updating volunteer:", error)
       toast({
         title: "Update Failed",
-        description: "Could not update the volunteer's profile. Please check the information and try again.",
+        description: "Could not update the volunteer's profile.",
         variant: "destructive",
         duration: 4000,
       })
@@ -99,41 +117,34 @@ export function VolunteerProfileDialog({
       return { ...prev, [field]: value };
     });
 
-    // Validate the field value after state update
+    // Validation logic remains the same
     switch (field) {
       case 'mobile_number':
         if (value && !/^\d{10}$/.test(value)) {
-          toast({
-            title: "Invalid Mobile Number",
-            description: "Please enter a valid 10-digit mobile number.",
-            variant: "destructive",
-            duration: 3000,
-          });
+          toast({ title: "Invalid Mobile Number", description: "Please enter a valid 10-digit mobile number.", variant: "destructive", duration: 3000 });
         }
         break;
       case 'aadhar_number':
         if (value && !/^\d{12}$/.test(value)) {
-          toast({
-            title: "Invalid Aadhar Number",
-            description: "Please enter a valid 12-digit Aadhar number.",
-            variant: "destructive",
-            duration: 3000,
-          });
+          toast({ title: "Invalid Aadhar Number", description: "Please enter a valid 12-digit Aadhar number.", variant: "destructive", duration: 3000 });
         }
         break;
       case 'age':
         const ageNum = parseInt(value);
         if (value && (isNaN(ageNum) || ageNum < 18 || ageNum > 100)) {
-          toast({
-            title: "Invalid Age",
-            description: "Age must be between 18 and 100 years.",
-            variant: "destructive",
-            duration: 3000,
-          });
+          toast({ title: "Invalid Age", description: "Age must be between 18 and 100 years.", variant: "destructive", duration: 3000 });
         }
         break;
     }
   };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    // Reset fields to original volunteer data
+    if (volunteer) {
+        setEditedVolunteer(volunteer);
+    }
+  }
 
   if (!volunteer || !editedVolunteer) return null
 
@@ -143,24 +154,30 @@ export function VolunteerProfileDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Volunteer Profile</span>
-            {!isEditing ? (
-              <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
-                <Edit2 className="h-4 w-4" />
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleSubmit} disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                </Button>
-              </div>
+            {/* Only show Edit/Save/Cancel buttons if user can edit */}
+            {canEdit && (
+              <>
+                {!isEditing ? (
+                  <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} title="Edit Profile">
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={handleCancelEdit} title="Cancel Edit">
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={handleSubmit} disabled={isSubmitting} title="Save Changes">
+                      {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Form submission is handled by the Save button, only enabled for super_admin */}
+        <form onSubmit={(e) => { e.preventDefault(); if (canEdit) handleSubmit(e); }} className="space-y-6">
           {/* Registration Details Section */}
           {volunteer.registered_volunteers && (
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -170,12 +187,12 @@ export function VolunteerProfileDialog({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-blue-700">Batch</Label>
-                  <div className="font-medium">{volunteer.registered_volunteers.batch || "Not specified"}</div>
+                  <Label className="text-blue-700">Past Seva Location</Label>
+                  <div className="font-medium">{volunteer.registered_volunteers.service_location || "Not specified"}</div>
                 </div>
                 <div>
-                  <Label className="text-blue-700">Service Location</Label>
-                  <div className="font-medium">{volunteer.registered_volunteers.service_location || "Not specified"}</div>
+                  <Label className="text-blue-700">Batch</Label> {/* Assuming batch exists */}
+                  <div className="font-medium">{volunteer.registered_volunteers.batch || "Not specified"}</div>
                 </div>
               </div>
             </div>
@@ -183,9 +200,10 @@ export function VolunteerProfileDialog({
 
           {/* Volunteer Details Section */}
           <div className="grid grid-cols-2 gap-4">
+            {/* Full Name */}
             <div className="space-y-2">
               <Label htmlFor="full_name">Full Name</Label>
-              {isEditing ? (
+              {isEditing && canEdit ? (
                 <Input
                   id="full_name"
                   value={editedVolunteer.full_name || ""}
@@ -196,9 +214,10 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
+            {/* Age */}
             <div className="space-y-2">
               <Label htmlFor="age">Age</Label>
-              {isEditing ? (
+              {isEditing && canEdit ? (
                 <Input
                   id="age"
                   type="number"
@@ -212,9 +231,10 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
+            {/* Mobile Number */}
             <div className="space-y-2">
               <Label htmlFor="mobile_number">Mobile Number</Label>
-              {isEditing ? (
+              {isEditing && canEdit ? (
                 <Input
                   id="mobile_number"
                   value={editedVolunteer.mobile_number || ""}
@@ -226,9 +246,10 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
+            {/* Aadhar Number */}
             <div className="space-y-2">
               <Label htmlFor="aadhar_number">Aadhar Number</Label>
-              {isEditing ? (
+              {isEditing && canEdit ? (
                 <Input
                   id="aadhar_number"
                   value={editedVolunteer.aadhar_number || ""}
@@ -240,9 +261,10 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
+            {/* SSS District */}
             <div className="space-y-2">
               <Label htmlFor="sss_district">SSS District</Label>
-              {isEditing ? (
+              {isEditing && canEdit ? (
                 <Select
                   value={editedVolunteer.sss_district || ""}
                   onValueChange={(value) => handleFieldChange('sss_district', value)}
@@ -263,9 +285,10 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
+            {/* Gender */}
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
-              {isEditing ? (
+              {isEditing && canEdit ? (
                 <Select
                   value={editedVolunteer.gender || ""}
                   onValueChange={(value) => handleFieldChange('gender', value)}
@@ -283,9 +306,10 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
+            {/* Education */}
             <div className="space-y-2">
               <Label htmlFor="education">Education</Label>
-              {isEditing ? (
+              {isEditing && canEdit ? (
                 <Select
                   value={editedVolunteer.education || ""}
                   onValueChange={(value) => handleFieldChange('education', value)}
@@ -306,9 +330,10 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
+            {/* Samiti/Bhajan Mandli */}
             <div className="space-y-2">
               <Label htmlFor="samiti">Samiti/Bhajan Mandli</Label>
-              {isEditing ? (
+              {isEditing && canEdit ? (
                 <Input
                   id="samiti"
                   value={editedVolunteer.samiti_or_bhajan_mandli || ""}
@@ -319,9 +344,10 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
+            {/* Special Qualifications */}
             <div className="space-y-2">
               <Label htmlFor="qualifications">Special Qualifications</Label>
-              {isEditing ? (
+              {isEditing && canEdit ? (
                 <Input
                   id="qualifications"
                   value={editedVolunteer.special_qualifications || ""}
@@ -336,4 +362,4 @@ export function VolunteerProfileDialog({
       </DialogContent>
     </Dialog>
   )
-} 
+}

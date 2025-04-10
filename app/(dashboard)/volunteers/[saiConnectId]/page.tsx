@@ -1,70 +1,62 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react" // Import useEffect
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
-import { getVolunteerById, updateVolunteerInDb, cancelVolunteerInDb } from "@/lib/supabase-service"
-import { Loader2, User, ArrowLeft, Edit2, Save, X, CheckCircle2, XCircle, UserX } from "lucide-react"
+import { getVolunteerById, updateVolunteerInDb } from "@/lib/supabase-service" // Removed unused cancelVolunteerInDb
+import { Loader2, User, ArrowLeft, Edit2, Save, X, CheckCircle2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { QUERY_KEYS } from "@/lib/query-hooks"
+import type { VolunteerData } from "@/lib/types"
+import { useAuth } from "@/contexts/auth-context" // Import useAuth
 
 export default function VolunteerDetailsPage() {
+  const { role } = useAuth() // Get user role
   const router = useRouter()
   const params = useParams()
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const saiConnectId = params?.saiConnectId as string
   const [isEditing, setIsEditing] = useState(false)
-  const [editedVolunteer, setEditedVolunteer] = useState<any>(null)
+  const [editedVolunteer, setEditedVolunteer] = useState<VolunteerData | null>(null)
 
-  const { data: volunteer, isLoading, error } = useQuery({
+  const { data: volunteer, isLoading, error } = useQuery<VolunteerData | null>({
     queryKey: [QUERY_KEYS.VOLUNTEER, saiConnectId],
     queryFn: () => getVolunteerById(saiConnectId),
     enabled: !!saiConnectId,
-    onSuccess: (data) => {
-      if (!editedVolunteer) {
-        setEditedVolunteer(data)
-      }
-    }
   })
 
-  const handleCancel = async () => {
-    if (!volunteer) return
-
-    try {
-      await cancelVolunteerInDb(volunteer.sai_connect_id)
-      await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.VOLUNTEER, saiConnectId] })
-      toast({
-        title: "Success",
-        description: "Volunteer has been cancelled successfully.",
-      })
-    } catch (err) {
-      console.error('Error cancelling volunteer:', err)
-      toast({
-        title: "Error",
-        description: "Failed to cancel volunteer. Please try again.",
-        variant: "destructive",
-      })
+  useEffect(() => {
+    // Set initial state for editing only when volunteer data loads and not already editing
+    if (volunteer && !editedVolunteer) {
+      setEditedVolunteer(volunteer)
     }
-  }
+    // Reset editing state if volunteer data changes (e.g., navigating between profiles)
+    if (volunteer && editedVolunteer && volunteer.sai_connect_id !== editedVolunteer.sai_connect_id) {
+        setEditedVolunteer(volunteer);
+        setIsEditing(false);
+    }
+  }, [volunteer, editedVolunteer]) // Dependency array includes editedVolunteer
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editedVolunteer) return
+    // Ensure only super_admin can submit
+    if (!editedVolunteer || role !== 'super_admin') return
 
     try {
       await updateVolunteerInDb(saiConnectId, editedVolunteer)
-      await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.VOLUNTEER, saiConnectId] })
-      await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.VOLUNTEERS] })
-      setIsEditing(false)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.VOLUNTEER, saiConnectId] }),
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.VOLUNTEERS] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboardData"] })
+      ]);
+      setIsEditing(false) // Exit editing mode on successful save
       toast({
         title: "Success",
         description: "Volunteer details updated successfully.",
@@ -81,7 +73,9 @@ export default function VolunteerDetailsPage() {
 
   const handleEditCancel = () => {
     setIsEditing(false)
-    setEditedVolunteer(volunteer)
+    if (volunteer) { // Reset to original fetched data
+      setEditedVolunteer(volunteer)
+    }
   }
 
   if (isLoading) {
@@ -99,10 +93,10 @@ export default function VolunteerDetailsPage() {
     )
   }
 
-  if (error || !volunteer) {
+  if (error || !volunteer || !editedVolunteer) { // Check editedVolunteer as well
     return (
       <div className="flex h-full items-center justify-center text-red-500">
-        An error occurred while loading volunteer details
+        An error occurred while loading volunteer details or volunteer not found.
       </div>
     )
   }
@@ -116,7 +110,7 @@ export default function VolunteerDetailsPage() {
       >
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Volunteer Details</h1>
-          <p className="text-muted-foreground">View and manage volunteer information</p>
+          <p className="text-muted-foreground">View {role === 'super_admin' ? 'and manage ' : ''}volunteer information</p>
         </div>
         <Button
           variant="ghost"
@@ -134,167 +128,181 @@ export default function VolunteerDetailsPage() {
         transition={{ delay: 0.1 }}
       >
         <Card className="border-sai-orange/20">
-          <form onSubmit={handleSubmit}>
+          {/* Use form only if super_admin, otherwise just display data */}
+          <form onSubmit={role === 'super_admin' ? handleSubmit : (e) => e.preventDefault()}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <User className="h-5 w-5 text-sai-orange" />
-                  <CardTitle>{editedVolunteer?.full_name}</CardTitle>
+                  {/* Display name from editedVolunteer for consistency */}
+                  <CardTitle>{editedVolunteer.full_name}</CardTitle>
                 </div>
                 <div className="flex items-center gap-2">
-                  {volunteer.is_cancelled ? (
+                  {editedVolunteer.is_cancelled === 'yes' ? (
                     <Badge variant="destructive">Cancelled</Badge>
-                  ) : volunteer.registered_volunteers ? (
+                  ) : editedVolunteer.registered_volunteers ? (
                     <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">Registered</Badge>
                   ) : (
-                    <Badge variant="secondary">Not Registered</Badge>
+                    <Badge variant="secondary">Active</Badge> // Changed from Not Registered
                   )}
-                  {!isEditing ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsEditing(true)}
-                      className="text-sai-orange hover:text-sai-orange-dark"
-                    >
-                      <Edit2 className="mr-2 h-4 w-4" />
-                      Edit
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
+                  {/* Edit/Save/Cancel Buttons Logic */}
+                  {role === 'super_admin' ? (
+                    isEditing ? (
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleEditCancel}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          className="bg-sai-orange hover:bg-sai-orange-dark"
+                        >
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Changes
+                        </Button>
+                      </div>
+                    ) : (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={handleEditCancel}
-                        className="text-red-500 hover:text-red-600"
+                        onClick={() => setIsEditing(true)}
+                        className="text-sai-orange hover:text-sai-orange-dark"
                       >
-                        <X className="mr-2 h-4 w-4" />
-                        Cancel
+                        <Edit2 className="mr-2 h-4 w-4" />
+                        Edit
                       </Button>
-                      <Button
-                        type="submit"
-                        className="bg-sai-orange hover:bg-sai-orange-dark"
-                      >
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Changes
-                      </Button>
-                    </div>
-                  )}
+                    )
+                  ) : null /* No edit button for normal_admin */}
                 </div>
               </div>
-              <CardDescription>SAI Connect ID: {editedVolunteer?.sai_connect_id}</CardDescription>
+              <CardDescription>SAI Connect ID: {editedVolunteer.sai_connect_id}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
+                {/* Field: Age */}
                 <div className="space-y-2">
                   <Label>Age</Label>
-                  {isEditing ? (
+                  {isEditing && role === 'super_admin' ? (
                     <Input
                       type="number"
-                      value={editedVolunteer?.age || ''}
-                      onChange={(e) => setEditedVolunteer({ ...editedVolunteer, age: parseInt(e.target.value) })}
+                      value={editedVolunteer.age || ''}
+                      onChange={(e) => setEditedVolunteer(prev => prev ? { ...prev, age: parseInt(e.target.value) || null } : null)}
                       min="18"
                       max="100"
                     />
                   ) : (
-                    <div className="text-sm">{editedVolunteer?.age || "Not specified"}</div>
+                    <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.age || "Not specified"}</div>
                   )}
                 </div>
+                {/* Field: Mobile Number */}
                 <div className="space-y-2">
                   <Label>Mobile Number</Label>
-                  {isEditing ? (
+                  {isEditing && role === 'super_admin' ? (
                     <Input
-                      value={editedVolunteer?.mobile_number || ''}
-                      onChange={(e) => setEditedVolunteer({ ...editedVolunteer, mobile_number: e.target.value })}
+                      value={editedVolunteer.mobile_number || ''}
+                      onChange={(e) => setEditedVolunteer(prev => prev ? { ...prev, mobile_number: e.target.value } : null)}
                       maxLength={10}
                     />
                   ) : (
-                    <div className="text-sm">{editedVolunteer?.mobile_number || "Not specified"}</div>
+                    <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.mobile_number || "Not specified"}</div>
                   )}
                 </div>
-                <div className="space-y-2">
+                 {/* Field: Aadhar Number */}
+                 <div className="space-y-2">
                   <Label>Aadhar Number</Label>
-                  {isEditing ? (
+                  {isEditing && role === 'super_admin' ? (
                     <Input
-                      value={editedVolunteer?.aadhar_number || ''}
-                      onChange={(e) => setEditedVolunteer({ ...editedVolunteer, aadhar_number: e.target.value })}
+                      value={editedVolunteer.aadhar_number || ''}
+                      onChange={(e) => setEditedVolunteer(prev => prev ? { ...prev, aadhar_number: e.target.value } : null)}
                       maxLength={12}
                     />
                   ) : (
-                    <div className="text-sm">{editedVolunteer?.aadhar_number || "Not specified"}</div>
+                    <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.aadhar_number || "Not specified"}</div>
                   )}
                 </div>
+                {/* Field: SSS District */}
                 <div className="space-y-2">
                   <Label>SSS District</Label>
-                  {isEditing ? (
+                  {isEditing && role === 'super_admin' ? (
                     <Input
-                      value={editedVolunteer?.sss_district || ''}
-                      onChange={(e) => setEditedVolunteer({ ...editedVolunteer, sss_district: e.target.value })}
+                      value={editedVolunteer.sss_district || ''}
+                      onChange={(e) => setEditedVolunteer(prev => prev ? { ...prev, sss_district: e.target.value } : null)}
                     />
                   ) : (
-                    <div className="text-sm">{editedVolunteer?.sss_district || "Not specified"}</div>
+                    <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.sss_district || "Not specified"}</div>
                   )}
                 </div>
+                {/* Field: Gender */}
                 <div className="space-y-2">
                   <Label>Gender</Label>
-                  {isEditing ? (
-                    <Input
-                      value={editedVolunteer?.Gender || ''}
-                      onChange={(e) => setEditedVolunteer({ ...editedVolunteer, Gender: e.target.value })}
+                  {isEditing && role === 'super_admin' ? (
+                    <Input // Consider using Select if options are fixed
+                      value={editedVolunteer.gender || ''}
+                      onChange={(e) => setEditedVolunteer(prev => prev ? { ...prev, gender: e.target.value } : null)}
                     />
                   ) : (
-                    <div className="text-sm">{editedVolunteer?.Gender || "Not specified"}</div>
+                    <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.gender || "Not specified"}</div>
                   )}
                 </div>
+                {/* Field: Samiti/Bhajan Mandli */}
                 <div className="space-y-2">
                   <Label>Samiti/Bhajan Mandli</Label>
-                  {isEditing ? (
+                  {isEditing && role === 'super_admin' ? (
                     <Input
-                      value={editedVolunteer?.samiti_or_bhajan_mandli || ''}
-                      onChange={(e) => setEditedVolunteer({ ...editedVolunteer, samiti_or_bhajan_mandli: e.target.value })}
+                      value={editedVolunteer.samiti_or_bhajan_mandli || ''}
+                      onChange={(e) => setEditedVolunteer(prev => prev ? { ...prev, samiti_or_bhajan_mandli: e.target.value } : null)}
                     />
                   ) : (
-                    <div className="text-sm">{editedVolunteer?.samiti_or_bhajan_mandli || "Not specified"}</div>
+                    <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.samiti_or_bhajan_mandli || "Not specified"}</div>
                   )}
                 </div>
+                {/* Field: Education */}
                 <div className="space-y-2">
                   <Label>Education</Label>
-                  {isEditing ? (
-                    <Input
-                      value={editedVolunteer?.education || ''}
-                      onChange={(e) => setEditedVolunteer({ ...editedVolunteer, education: e.target.value })}
+                  {isEditing && role === 'super_admin' ? (
+                    <Input // Consider using Select if options are fixed
+                      value={editedVolunteer.education || ''}
+                      onChange={(e) => setEditedVolunteer(prev => prev ? { ...prev, education: e.target.value } : null)}
                     />
                   ) : (
-                    <div className="text-sm">{editedVolunteer?.education || "Not specified"}</div>
+                    <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.education || "Not specified"}</div>
                   )}
                 </div>
+                {/* Field: Special Qualifications */}
                 <div className="space-y-2">
                   <Label htmlFor="qualifications">Special Qualifications</Label>
-                  {isEditing ? (
+                  {isEditing && role === 'super_admin' ? (
                     <Input
                       id="qualifications"
-                      value={editedVolunteer?.special_qualifications || ""}
-                      onChange={(e) => setEditedVolunteer({ ...editedVolunteer, special_qualifications: e.target.value })}
+                      value={editedVolunteer.special_qualifications || ""}
+                      onChange={(e) => setEditedVolunteer(prev => prev ? { ...prev, special_qualifications: e.target.value } : null)}
                     />
                   ) : (
-                    <div className="font-medium">{volunteer.special_qualifications || "Not specified"}</div>
+                    <div className="text-sm p-2 min-h-[40px] font-medium">{editedVolunteer.special_qualifications || "Not specified"}</div>
                   )}
                 </div>
               </div>
 
-              {volunteer.registered_volunteers && (
-                <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center gap-2 text-green-600 mb-2">
+              {/* Registration Details Section (Read-only) */}
+              {editedVolunteer.registered_volunteers && (
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-300 mb-2">
                     <CheckCircle2 className="h-5 w-5" />
                     <h3 className="font-semibold">Registration Details</h3>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Batch</Label>
-                      <div className="text-sm">{volunteer.registered_volunteers.batch}</div>
+                      <div className="text-sm">{editedVolunteer.registered_volunteers.batch}</div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Service Location</Label>
-                      <div className="text-sm">{volunteer.registered_volunteers.service_location}</div>
+                      <Label>Past Seva Location</Label>
+                      <div className="text-sm">{editedVolunteer.registered_volunteers.service_location}</div>
                     </div>
                   </div>
                 </div>
@@ -305,4 +313,4 @@ export default function VolunteerDetailsPage() {
       </motion.div>
     </div>
   )
-} 
+}

@@ -13,7 +13,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { LoaderCircle, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { Checkbox } from "@/components/ui/checkbox"
+// Removed Checkbox import
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 
@@ -27,16 +27,11 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(false)
+  // Removed rememberMe state
   const [errorType, setErrorType] = useState<'email' | 'password' | null>(null)
 
   useEffect(() => {
-    // Check for saved credentials
-    const savedEmail = localStorage.getItem("rememberedEmail")
-    if (savedEmail) {
-      setEmail(savedEmail)
-      setRememberMe(true)
-    }
+    // Removed logic for checking saved credentials
 
     if (user) {
       router.push("/dashboard")
@@ -66,12 +61,7 @@ export default function LoginPage() {
     try {
       await login(email, password)
       
-      // Handle remember me
-      if (rememberMe) {
-        localStorage.setItem("rememberedEmail", email)
-      } else {
-        localStorage.removeItem("rememberedEmail")
-      }
+      // Removed remember me logic
 
       toast({
         title: "Success!",
@@ -231,16 +221,7 @@ export default function LoginPage() {
                   </motion.p>
                 )}
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember"
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                />
-                <Label htmlFor="remember" className="text-sm text-muted-foreground">
-                  Remember me
-                </Label>
-              </div>
+              {/* Removed Remember me checkbox and label */}
               {error && !errorType && (
                 <motion.p
                   initial={{ opacity: 0, y: -10 }}
@@ -265,26 +246,15 @@ export default function LoginPage() {
                   "Sign In"
                 )}
               </Button>
-              <p className="text-center text-sm text-muted-foreground">
-                Don't have an account?{" "}
-                <Link href="/signup" className="text-sai-orange hover:text-sai-orange-dark">
-                  Sign up
-                </Link>
-              </p>
+              {/* Removed Sign up link */}
             </CardContent>
           </form>
-          <CardFooter className="flex flex-col space-y-2 text-center text-sm text-muted-foreground">
+          <CardFooter className="flex justify-center text-center text-sm text-muted-foreground pt-4"> {/* Adjusted footer */}
             <p>Need help? Contact your administrator</p>
-            <Link 
-              href="/forgot-password" 
-              className="text-sai-orange hover:text-sai-orange-dark transition-colors duration-200"
-            >
-              Forgot password?
-            </Link>
+            {/* Removed Forgot password link */}
           </CardFooter>
         </Card>
       </motion.div>
     </div>
   )
 }
-

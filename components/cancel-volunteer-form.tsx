@@ -12,20 +12,28 @@ import { cancelVolunteer } from "@/lib/api-service"
 import { cancelVolunteerInDb } from "@/lib/supabase-service"
 import { Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { UserRole } from "@/contexts/auth-context" // Import UserRole
 
 type CancelVolunteerFormProps = {
-  token: string
   onSuccess?: () => void
-  dataSource: "api" | "supabase"
+  userRole: UserRole
 }
 
-export function CancelVolunteerForm({ token, onSuccess, dataSource }: CancelVolunteerFormProps) {
+export function CancelVolunteerForm({ onSuccess, userRole }: CancelVolunteerFormProps) { // Removed unused token, dataSource
   const [volunteerId, setVolunteerId] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
+  // Determine if the form should be enabled based on role
+  const canCancel = userRole === 'super_admin';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Prevent submission if not allowed
+    if (!canCancel) {
+        toast({ title: "Permission Denied", description: "You do not have permission to cancel volunteers.", variant: "destructive" });
+        return;
+    }
     setIsSubmitting(true)
 
     try {
@@ -109,11 +117,12 @@ export function CancelVolunteerForm({ token, onSuccess, dataSource }: CancelVolu
               value={volunteerId}
               onChange={(e) => setVolunteerId(e.target.value)}
               required
+              disabled={!canCancel} // Disable input if cannot cancel
             />
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" variant="destructive" disabled={isSubmitting}>
+          <Button type="submit" variant="destructive" disabled={isSubmitting || !canCancel} title={!canCancel ? "Permission Denied" : ""}> {/* Disable button and add title */}
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -128,4 +137,3 @@ export function CancelVolunteerForm({ token, onSuccess, dataSource }: CancelVolu
     </Card>
   )
 }
-

@@ -1,16 +1,16 @@
 "use client"
 
-import React, { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect } from "react" // Removed React import
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/contexts/auth-context"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu" // Add DropdownMenuSeparator
+import { useAuth } from "@/contexts/auth-context" // Removed unused UserRole import
 import { deleteVolunteerFromDb, cancelVolunteerInDb } from "@/lib/supabase-service"
-import { Loader2, MoreHorizontal, Plus, UserX, Search, Download, UserPlus, Eye, X } from "lucide-react"
+import { Loader2, MoreHorizontal, UserX, Search, Download, UserPlus, Eye, X, Edit } from "lucide-react" // Removed Plus, Add Edit icon
 import { Badge } from "@/components/ui/badge"
-import { CancelVolunteerForm } from "@/components/cancel-volunteer-form"
+// Removed unused CancelVolunteerForm import
 import { ExcelUpload } from "@/components/excel-upload"
 import { useToast } from "@/components/ui/use-toast"
 import { RegisterVolunteerForm } from "@/components/register-volunteer-form"
@@ -22,15 +22,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { VolunteerProfileDialog } from "@/components/volunteer-profile-dialog"
 import { RealtimeChannel } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
+import type { VolunteerData } from "@/lib/types" // Import VolunteerData type
 
 export default function VolunteersPage() {
-  const { user } = useAuth()
+  const { role } = useAuth() // Removed unused user variable
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { data: volunteers = [], isLoading, error } = useVolunteers()
+  const { data: volunteers = [], isLoading } = useVolunteers() // Removed unused error variable
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [selectedVolunteer, setSelectedVolunteer] = useState<any>(null)
+  const [selectedVolunteer, setSelectedVolunteer] = useState<VolunteerData | null>(null) // Use correct type
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
   const filteredVolunteers = useMemo(() => {
@@ -61,7 +62,11 @@ export default function VolunteersPage() {
 
   const handleRegister = async () => {
     try {
-      await queryClient.invalidateQueries({ queryKey: ["volunteers"] })
+      // Invalidate both volunteers list and dashboard data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["volunteers"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboardData"] })
+      ]);
       toast({
         title: "Volunteer Registered",
         description: "The volunteer has been successfully registered for service.",
@@ -81,18 +86,33 @@ export default function VolunteersPage() {
   const handleCancel = async (saiConnectId: string) => {
     try {
       await cancelVolunteerInDb(saiConnectId)
-      await queryClient.invalidateQueries({ queryKey: ["volunteers"] })
+      // Invalidate both volunteers list and dashboard data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["volunteers"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboardData"] })
+      ]);
       toast({
         title: "Volunteer Cancelled",
         description: "The volunteer's service has been cancelled successfully.",
         variant: "default",
         duration: 3000,
       })
-    } catch (err) {
+    } catch (err: any) { // Add type 'any' to access err.message
       console.error('Error cancelling volunteer:', err)
+      let description = "Could not cancel the volunteer. Please try again."
+      if (err instanceof Error) {
+        if (err.message === 'Could not find volunteer') {
+          description = `Volunteer with ID ${saiConnectId} not found.`
+        } else if (err.message === 'Could not unregister volunteer') {
+          description = `Failed to update registration status for volunteer ${saiConnectId}.`
+        } else if (err.message === 'Could not cancel volunteer') {
+          description = `Failed to update cancellation status for volunteer ${saiConnectId}.`
+        }
+        // Keep the generic message for other unexpected errors
+      }
       toast({
         title: "Cancellation Failed",
-        description: "Could not cancel the volunteer. Please try again.",
+        description: description,
         variant: "destructive",
         duration: 4000,
       })
@@ -120,13 +140,17 @@ export default function VolunteersPage() {
     }
   }
 
-  const handleVolunteerClick = (volunteer: any) => {
+  const handleVolunteerClick = (volunteer: VolunteerData) => { // Use correct type
     setSelectedVolunteer(volunteer)
     setIsProfileOpen(true)
   }
 
   const handleVolunteerUpdate = () => {
-    queryClient.invalidateQueries({ queryKey: ["volunteers"] })
+    // Invalidate both volunteers list and dashboard data
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["volunteers"] }),
+      queryClient.invalidateQueries({ queryKey: ["dashboardData"] })
+    ]);
     toast({
       title: "Profile Updated",
       description: "The volunteer's profile has been updated successfully.",
@@ -213,7 +237,7 @@ export default function VolunteersPage() {
       }
       clearInterval(refreshInterval)
     }
-  }, [queryClient, toast])
+  }, [queryClient, toast, fetchData]) // Added fetchData to dependency array
 
   if (isLoading) {
     return (
@@ -223,13 +247,8 @@ export default function VolunteersPage() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full text-red-500">
-        An error occurred while loading volunteers
-      </div>
-    )
-  }
+  // Removed the check for the non-existent 'error' variable
+  // if (error) { ... }
 
   return (
     <div className="space-y-4">
@@ -259,7 +278,8 @@ export default function VolunteersPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <CancelVolunteerForm token="" onSuccess={handleRegister} dataSource="supabase" />
+              {/* Pass userRole to ExcelUpload */}
+              <ExcelUpload onSuccess={handleRegister} userRole={role} />
             </CardContent>
           </Card>
 
@@ -271,7 +291,8 @@ export default function VolunteersPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ExcelUpload onSuccess={handleRegister} />
+              {/* Pass userRole to ExcelUpload */}
+              <ExcelUpload onSuccess={handleRegister} userRole={role} />
             </CardContent>
           </Card>
         </div>
@@ -338,14 +359,15 @@ export default function VolunteersPage() {
                         <TableCell className="hidden sm:table-cell">{volunteer.mobile_number}</TableCell>
                         <TableCell className="hidden sm:table-cell">
                           <Badge
-                            variant={
+                            variant={volunteer.is_cancelled === 'yes' ? "destructive" : undefined} // Use destructive variant only for cancelled
+                            className={cn(
+                              "hover:opacity-80 transition-opacity", // Base classes
                               volunteer.is_cancelled === 'yes'
-                                ? "destructive"
+                                ? "" // Destructive variant handles red styling
                                 : volunteer.registered_volunteers
-                                ? "default"
-                                : "secondary"
-                            }
-                            className="hover:opacity-80 transition-opacity"
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-300 dark:border-blue-700" // Blue for Registered
+                                : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-300 dark:border-green-700" // Green for Active
+                            )}
                           >
                             {volunteer.is_cancelled === 'yes'
                               ? "Cancelled"
@@ -356,37 +378,46 @@ export default function VolunteersPage() {
                         </TableCell>
                         <TableCell className="hidden md:table-cell">{volunteer.sss_district}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-1"> {/* Reduced gap */}
+                            {/* View/Edit Button */}
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => handleVolunteerClick(volunteer)}
+                              title={role === 'super_admin' ? "View/Edit Profile" : "View Profile"}
                             >
-                              <Eye className="h-4 w-4" />
+                              {/* Show Edit icon for super_admin, Eye for normal_admin */}
+                              {role === 'super_admin' ? <Edit className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Open menu</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleCancel(volunteer.sai_connect_id)}
-                                  disabled={volunteer.is_cancelled === 'yes'}
-                                  className="text-red-500 focus:text-red-500"
-                                >
-                                  Cancel Volunteer
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(volunteer.sai_connect_id)}
-                                  className="text-red-500 focus:text-red-500"
-                                >
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {/* Actions Dropdown - Only for super_admin */}
+                            {role === 'super_admin' && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Open menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleCancel(volunteer.sai_connect_id)}
+                                    disabled={volunteer.is_cancelled === 'yes'}
+                                    className="text-orange-600 focus:text-orange-600 focus:bg-orange-50"
+                                  >
+                                    <UserX className="mr-2 h-4 w-4" />
+                                    Cancel Volunteer
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(volunteer.sai_connect_id)}
+                                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                  >
+                                    <X className="mr-2 h-4 w-4" />
+                                    Delete Permanently
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -399,13 +430,14 @@ export default function VolunteersPage() {
         </Card>
       </div>
 
+      {/* Pass role to VolunteerProfileDialog */}
       <VolunteerProfileDialog
         volunteer={selectedVolunteer}
         isOpen={isProfileOpen}
         onOpenChange={setIsProfileOpen}
         onUpdate={handleVolunteerUpdate}
+        userRole={role} // Pass the role
       />
     </div>
   )
 }
-

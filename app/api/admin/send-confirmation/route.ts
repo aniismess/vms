@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createTransport } from 'nodemailer'
-import { supabase } from '@/lib/supabase'
+// Removed unused supabase import
 
 const transporter = createTransport({
   host: process.env.SMTP_HOST,
@@ -76,4 +76,4 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
-} 
+}

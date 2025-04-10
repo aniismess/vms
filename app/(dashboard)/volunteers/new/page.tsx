@@ -8,13 +8,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
+// Removed unused Switch import
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createVolunteerInDb } from "@/lib/supabase-service"
 import { Loader2, UserPlus, ArrowLeft } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { motion } from "framer-motion"
-import type { YesNoType } from "@/lib/supabase-service"
+import type { YesNoType } from "@/lib/supabase-service" // Re-added YesNoType import from correct path
 
 const SSS_DISTRICTS = [
   "Amla",
@@ -148,7 +148,7 @@ export default function NewVolunteerPage() {
         samiti_or_bhajan_mandli: samiti,
         education: education,
         special_qualifications: qualifications || null,
-        is_cancelled: 'no',
+        is_cancelled: 'no' as YesNoType, // Explicitly cast to YesNoType
         serial_number: null,
         prashanti_arrival: null,
         prashanti_departure: null,
@@ -388,4 +388,3 @@ export default function NewVolunteerPage() {
     </div>
   )
 }
-
