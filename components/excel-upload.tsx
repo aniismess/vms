@@ -14,6 +14,7 @@ import { supabase } from "@/lib/supabase"
 import { Progress } from "@/components/ui/progress"
 // Removed unused YesNoType import
 import { UserRole } from "@/contexts/auth-context" // Import UserRole
+import { cn } from "@/lib/utils"
 
 interface VolunteerExcelData {
   serial_number: string | null;
@@ -582,32 +583,49 @@ export function ExcelUpload({ onSuccess, userRole }: ExcelUploadProps) { // Acce
   }
 
   return (
-    <Card>
+    <Card className="border-blue-100 dark:border-blue-900/50">
       <CardHeader>
-        <CardTitle>Upload Volunteer Data</CardTitle>
-        <CardDescription>Upload volunteer data from Excel (.xlsx, .xls) or CSV files</CardDescription>
+        <CardTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+          <Upload className="h-5 w-5" />
+          Bulk Upload Volunteers
+        </CardTitle>
+        <CardDescription className="text-muted-foreground">
+          Upload volunteer data from Excel (.xlsx, .xls) or CSV files
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="excel-file">Select File</Label>
+          <Label htmlFor="excel-file" className="text-muted-foreground">Select File</Label>
           <Input 
             id="excel-file" 
             type="file" 
             accept=".xlsx,.xls,.csv" 
             onChange={handleFileChange} 
-            disabled={isUploading || !canUpload} // Disable if uploading or no permission
+            disabled={isUploading || !canUpload}
+            className={cn(
+              "w-full",
+              (isUploading || !canUpload) && "opacity-50 cursor-not-allowed"
+            )}
           />
         </div>
         {isUploading && (
           <div className="space-y-2">
-            <Label>Upload Progress</Label>
+            <Label className="text-muted-foreground">Upload Progress</Label>
             <Progress value={progress} className="h-2" />
             <p className="text-sm text-muted-foreground text-center">{progress}% Complete</p>
           </div>
         )}
       </CardContent>
       <CardFooter>
-        <Button onClick={handleUpload} disabled={!file || isUploading || !canUpload} className="w-full" title={!canUpload ? "Permission Denied" : ""}> {/* Disable button and add title */}
+        <Button 
+          onClick={handleUpload} 
+          disabled={!file || isUploading || !canUpload} 
+          className={cn(
+            "w-full",
+            (!file || isUploading || !canUpload) && "opacity-50 cursor-not-allowed"
+          )}
+          title={!canUpload ? "Permission Denied" : ""}
+        >
           {isUploading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

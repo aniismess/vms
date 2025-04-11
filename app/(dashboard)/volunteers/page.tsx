@@ -1,16 +1,15 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react" // Removed React import
+import { useState, useMemo, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu" // Add DropdownMenuSeparator
-import { useAuth } from "@/contexts/auth-context" // Removed unused UserRole import
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/contexts/auth-context"
 import { deleteVolunteerFromDb, cancelVolunteerInDb } from "@/lib/supabase-service"
-import { Loader2, MoreHorizontal, UserX, Search, Download, UserPlus, Eye, X, Edit } from "lucide-react" // Removed Plus, Add Edit icon
+import { Loader2, MoreHorizontal, UserX, Search, Download, UserPlus, Eye, X, Edit } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-// Removed unused CancelVolunteerForm import
 import { ExcelUpload } from "@/components/excel-upload"
 import { useToast } from "@/components/ui/use-toast"
 import { RegisterVolunteerForm } from "@/components/register-volunteer-form"
@@ -22,7 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { VolunteerProfileDialog } from "@/components/volunteer-profile-dialog"
 import { RealtimeChannel } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
-import type { VolunteerData } from "@/lib/types" // Import VolunteerData type
+import type { VolunteerData } from "@/lib/types"
+import { CancelVolunteerForm } from "@/components/cancel-volunteer-form"
 
 export default function VolunteersPage() {
   const { role } = useAuth() // Removed unused user variable
@@ -159,12 +159,16 @@ export default function VolunteersPage() {
     })
   }
 
-  const fetchData = async () => {
+  // Wrap fetchData in useCallback to stabilize its reference
+  const fetchData = useCallback(async () => {
     try {
-      await queryClient.invalidateQueries({ queryKey: ["volunteers"] })
+      // Use invalidateQueries without await as it doesn't need to block
+      // Invalidate both volunteers and dashboard data
+      queryClient.invalidateQueries({ queryKey: ["volunteers"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardData"] }); 
       toast({
         title: "Data Refreshed",
-        description: "The volunteer list has been updated with the latest data.",
+        description: "Volunteer and dashboard data have been updated.",
         variant: "default",
         duration: 2000,
       })
@@ -177,7 +181,7 @@ export default function VolunteersPage() {
         duration: 4000,
       })
     }
-  }
+  }, [queryClient, toast]) // queryClient and toast are stable references
 
   useEffect(() => {
     let volunteersChannel: RealtimeChannel | null = null
@@ -237,7 +241,7 @@ export default function VolunteersPage() {
       }
       clearInterval(refreshInterval)
     }
-  }, [queryClient, toast, fetchData]) // Added fetchData to dependency array
+  }, [fetchData]) // Now only depends on the stable fetchData reference
 
   if (isLoading) {
     return (
@@ -251,7 +255,7 @@ export default function VolunteersPage() {
   // if (error) { ... }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -269,32 +273,12 @@ export default function VolunteersPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserX className="h-5 w-5 text-red-500" />
-                Cancel Volunteer
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Pass userRole to ExcelUpload */}
-              <ExcelUpload onSuccess={handleRegister} userRole={role} />
-            </CardContent>
-          </Card>
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Restored Cancel Volunteer Section */}
+          <CancelVolunteerForm onSuccess={fetchData} userRole={role} />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Download className="h-5 w-5 text-blue-500" />
-                Upload Volunteer Data
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Pass userRole to ExcelUpload */}
-              <ExcelUpload onSuccess={handleRegister} userRole={role} />
-            </CardContent>
-          </Card>
+          {/* Restored Bulk Upload Section */}
+          <ExcelUpload onSuccess={fetchData} userRole={role} />
         </div>
 
         <Card>
