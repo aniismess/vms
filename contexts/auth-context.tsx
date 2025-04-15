@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
-      setIsLoading(true); // Start loading when auth state changes
+      // setIsLoading(true); // Don't set loading true for background auth changes
       const currentUser = session?.user ?? null;
       let userRole: UserRole = null;
 
@@ -124,7 +124,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (isMounted) {
         setUser(currentUser);
         setRole(userRole);
-        setIsLoading(false); // Finish loading after state is updated
+        // Ensure loading is false, even if it wasn't set to true here,
+        // in case a foreground action (login/logout) triggered loading before this ran.
+        setIsLoading(false);
       }
     });
 

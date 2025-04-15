@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from "next-themes"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
-import { useEffect, useState } from "react"
+// Removed useEffect, useState import
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,29 +18,18 @@ const queryClient = new QueryClient({
 })
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  // Removed mounted state and useEffect
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <div className={mounted ? "" : "hidden"}>
-            {children}
-            <Toaster />
-          </div>
+          {/* Removed conditional rendering wrapper */}
+          {children}
+          <Toaster />
         </AuthProvider>
       </QueryClientProvider>
-      {!mounted && (
-        <div className="min-h-screen bg-white">
-          <div className="flex h-screen items-center justify-center">
-            <div className="text-black">Loading...</div>
-          </div>
-        </div>
-      )}
+      {/* Removed loading block */}
     </ThemeProvider>
   )
-} 
+}
