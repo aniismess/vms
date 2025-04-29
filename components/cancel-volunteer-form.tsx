@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import { cancelVolunteer } from "@/lib/api-service"
+// Removed unused import: import { cancelVolunteer } from "@/lib/api-service"
 import { cancelVolunteerInDb } from "@/lib/supabase-service"
 import { Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"

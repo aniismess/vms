@@ -8,56 +8,94 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Upload } from "lucide-react"
+import { Loader2, Upload, Info } from "lucide-react" // Info icon already imported
 import * as XLSX from "xlsx"
 import { supabase } from "@/lib/supabase"
 import { Progress } from "@/components/ui/progress"
-// Removed unused YesNoType import
+// Removed Alert components as we use Popover now
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover" // Added Popover components
 import { UserRole } from "@/contexts/auth-context" // Import UserRole
 import { cn } from "@/lib/utils"
+import type { YesNoType } from "@/lib/types" // Import YesNoType
 
-interface VolunteerExcelData {
-  serial_number: string | null;
-  full_name: string | null;
-  age: number | null;
-  aadhar_number: string | null;
-  sai_connect_id: string;
-  mobile_number: string | null;
-  sss_district: string | null;
-  gender: string | null;
-  samiti_or_bhajan_mandli: string | null;
-  education: string | null;
-  special_qualifications: string | null;
-  last_service_location: string | null;
-  other_service_location: string | null;
-  prashanti_arrival: string | null;
-  prashanti_departure: string | null;
-  duty_point: string | null;
-  is_cancelled: boolean;
+// Interface for data read directly from Excel (flexible types)
+interface VolunteerExcelRow {
+  [key: string]: any; // Allow any header initially
+  // Define expected keys after mapping for type safety, allow null/undefined initially
+  serial_number?: string | number | null;
+  full_name?: string | null;
+  age?: string | number | null;
+  aadhar_number?: string | number | null;
+  sai_connect_id?: string | number | null;
+  mobile_number?: string | number | null;
+  sss_district?: string | null;
+  gender?: string | null;
+  samiti_or_bhajan_mandli?: string | null;
+  education?: string | null;
+  special_qualifications?: string | null;
+  last_service_location?: string | null;
+  other_service_location?: string | null;
+  prashanti_arrival?: string | number | Date | null; // Allow various date inputs
+  prashanti_departure?: string | number | Date | null; // Allow various date inputs
+  duty_point?: string | null;
+  is_cancelled?: string | number | boolean | null;
 }
 
-// Header mapping for both English and Hindi
-const headerMapping: { [key: string]: string } = {
-  // English headers
+// Interface for data ready for DB insertion (strict types)
+interface DatabaseInsertData {
+  sai_connect_id: string;
+  full_name: string;
+  age: number;
+  mobile_number: string;
+  sss_district: string;
+  is_cancelled: YesNoType; // Use 'yes' | 'no'
+  // Optional fields allowing null
+  aadhar_number?: string | null;
+  gender?: string | null;
+  samiti_or_bhajan_mandli?: string | null;
+  education?: string | null;
+  special_qualifications?: string | null;
+  last_service_location?: string | null;
+  other_service_location?: string | null;
+  prashanti_arrival?: string | null; // Store as ISO string or null
+  prashanti_departure?: string | null; // Store as ISO string or null
+  duty_point?: string | null;
+  // serial_number is not typically inserted/updated directly if it's auto-generated
+}
+
+
+// Header mapping (lowercase keys)
+const headerMapping: { [key: string]: keyof VolunteerExcelRow } = {
+  // English headers (lowercase)
   "serial number": "serial_number",
   "full name": "full_name",
   "age": "age",
   "aadhar number": "aadhar_number",
+  "aadhar": "aadhar_number", // Alias
   "sai connect id": "sai_connect_id",
+  "connect id": "sai_connect_id", // Alias
   "mobile number": "mobile_number",
+  "mobile no": "mobile_number", // Alias
+  "mobile": "mobile_number", // Alias
   "sss district": "sss_district",
+  "district": "sss_district", // Alias
   "gender": "gender",
   "samiti or bhajan mandli": "samiti_or_bhajan_mandli",
+  "samiti/bhajan mandli": "samiti_or_bhajan_mandli", // Alias
+  "samiti": "samiti_or_bhajan_mandli", // Alias
   "education": "education",
   "special qualifications": "special_qualifications",
   "last service location": "last_service_location",
   "other service location": "other_service_location",
   "prashanti arrival": "prashanti_arrival",
+  "arrival date": "prashanti_arrival", // Alias
   "prashanti departure": "prashanti_departure",
+  "departure date": "prashanti_departure", // Alias
   "duty point": "duty_point",
   "is cancelled": "is_cancelled",
-  
-  // Hindi headers (add your Hindi translations here)
+  "cancelled": "is_cancelled", // Alias
+
+  // Hindi headers (lowercase)
   "क्रम संख्या": "serial_number",
   "पूरा नाम": "full_name",
   "आयु": "age",
@@ -66,6 +104,7 @@ const headerMapping: { [key: string]: string } = {
   "मोबाइल नंबर": "mobile_number",
   "एसएसएस जिला": "sss_district",
   "जिला": "sss_district",
+  "लिंग": "gender",
   "समिति या भजन मंडली": "samiti_or_bhajan_mandli",
   "शिक्षा": "education",
   "विशेष योग्यता": "special_qualifications",
@@ -75,9 +114,31 @@ const headerMapping: { [key: string]: string } = {
   "प्रशांति प्रस्थान": "prashanti_departure",
   "ड्यूटी पॉइंट": "duty_point",
   "रद्द किया गया": "is_cancelled",
-}
+};
 
-// Add this type definition at the top with other types
+// Define expected database headers/columns and their requirements
+const databaseSchema: { key: keyof DatabaseInsertData | 'serial_number', label: string, required: boolean, type: 'string' | 'number' | 'boolean' | 'date' }[] = [
+  // Note: serial_number is often auto-generated, so not marked required for insert
+  // { key: 'serial_number', label: 'Serial Number', required: false, type: 'string' },
+  { key: 'sai_connect_id', label: 'SAI Connect ID', required: true, type: 'string' },
+  { key: 'full_name', label: 'Full Name', required: true, type: 'string' },
+  { key: 'age', label: 'Age', required: true, type: 'number' },
+  { key: 'mobile_number', label: 'Mobile Number', required: true, type: 'string' },
+  { key: 'sss_district', label: 'SSS District', required: true, type: 'string' },
+  { key: 'aadhar_number', label: 'Aadhar Number', required: false, type: 'string' },
+  { key: 'gender', label: 'Gender', required: false, type: 'string' },
+  { key: 'samiti_or_bhajan_mandli', label: 'Samiti or Bhajan Mandli', required: false, type: 'string' },
+  { key: 'education', label: 'Education', required: false, type: 'string' },
+  { key: 'special_qualifications', label: 'Special Qualifications', required: false, type: 'string' },
+  { key: 'last_service_location', label: 'Last Service Location', required: false, type: 'string' },
+  { key: 'other_service_location', label: 'Other Service Location', required: false, type: 'string' },
+  { key: 'prashanti_arrival', label: 'Prashanti Arrival', required: false, type: 'date' },
+  { key: 'prashanti_departure', label: 'Prashanti Departure', required: false, type: 'date' },
+  { key: 'duty_point', label: 'Duty Point', required: false, type: 'string' },
+  { key: 'is_cancelled', label: 'Is Cancelled', required: false, type: 'boolean' } // Type for parsing, converted to 'yes'/'no' later
+];
+
+
 type DeduplicationStats = {
   totalRows: number;
   duplicateRows: number;
@@ -85,17 +146,17 @@ type DeduplicationStats = {
   duplicateIds: string[];
 }
 
-// Add this function before the ExcelUpload component
-function deduplicateVolunteers(volunteers: Partial<VolunteerExcelData>[]): {
-  uniqueVolunteers: Partial<VolunteerExcelData>[];
+function deduplicateVolunteers(volunteers: VolunteerExcelRow[]): {
+  uniqueVolunteers: VolunteerExcelRow[];
   stats: DeduplicationStats;
 } {
-  const seen = new Map<string, Partial<VolunteerExcelData>>();
+  const seen = new Map<string, VolunteerExcelRow>();
   const duplicateIds: string[] = [];
 
   volunteers.forEach((volunteer) => {
-    const id = volunteer.sai_connect_id;
-    if (!id) return;
+    // Use sai_connect_id for deduplication, ensure it's treated as string
+    const id = volunteer.sai_connect_id ? String(volunteer.sai_connect_id).trim() : undefined;
+    if (!id) return; // Skip rows without an ID for deduplication purposes
 
     if (seen.has(id)) {
       duplicateIds.push(id);
@@ -115,164 +176,168 @@ function deduplicateVolunteers(volunteers: Partial<VolunteerExcelData>[]): {
   };
 }
 
-// Add these helper functions at the top
 function normalizeBoolean(value: any): boolean {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value === 1;
   if (typeof value === 'string') {
     const normalized = value.toLowerCase().trim();
-    return ['yes', 'true', '1', 'हाँ', 'y', 't'].includes(normalized);
+    // Added 'y', 't', 'हां' for more flexibility
+    return ['yes', 'true', '1', 'हाँ', 'y', 't', 'हां'].includes(normalized);
   }
-  return false;
+  return false; // Default to false if not recognized
 }
 
-function validateVolunteerData(volunteer: Partial<VolunteerExcelData>, rowIndex: number): string[] {
+// Enhanced Validation Function
+function validateVolunteerData(volunteer: VolunteerExcelRow, rowIndex: number): string[] {
   const errors: string[] = [];
-  
-  // Required fields validation
-  if (!volunteer.sai_connect_id) {
-    errors.push(`Row ${rowIndex}: SAI Connect ID is required`);
+  const requiredKeys: (keyof DatabaseInsertData)[] = databaseSchema
+    .filter(h => h.required)
+    .map(h => h.key as keyof DatabaseInsertData);
+
+  // Check required fields first
+  requiredKeys.forEach(key => {
+    if (volunteer[key] === undefined || volunteer[key] === null || String(volunteer[key]).trim() === '') {
+       const headerLabel = databaseSchema.find(h => h.key === key)?.label || key;
+       errors.push(`Row ${rowIndex}: Required field "${headerLabel}" is missing.`);
+    }
+  });
+
+  // If required fields are missing, stop further validation for this row
+  if (errors.length > 0) return errors;
+
+  // --- Specific Field Validations (only if required fields are present) ---
+
+  // SAI Connect ID: Must be exactly 6 digits after cleaning
+  const rawSaiConnectId = String(volunteer.sai_connect_id);
+  const cleanId = rawSaiConnectId.replace(/\D/g, ''); // Remove non-digits
+  if (cleanId.length !== 6) {
+    errors.push(`Row ${rowIndex}: SAI Connect ID "${rawSaiConnectId}" must contain exactly 6 digits.`);
   } else {
-    // Clean and validate SAI Connect ID
-    const cleanId = String(volunteer.sai_connect_id).replace(/\D/g, '');
-    if (cleanId.length !== 6) {
-      // If the ID is too short, try to pad it with zeros
-      if (cleanId.length < 6) {
-        const paddedId = cleanId.padStart(6, '0');
-        volunteer.sai_connect_id = paddedId;
-        console.log(`Row ${rowIndex}: Padded SAI Connect ID from ${cleanId} to ${paddedId}`);
-      } else {
-        errors.push(`Row ${rowIndex}: SAI Connect ID must be 6 digits (got ${cleanId.length} digits)`);
-      }
-    } else {
-      // Update the ID with cleaned version
-      volunteer.sai_connect_id = cleanId;
-    }
+     volunteer.sai_connect_id = cleanId; // Store cleaned ID
   }
 
-  if (!volunteer.full_name) {
-    errors.push(`Row ${rowIndex}: Full Name is required`);
+  // Mobile Number: Must be exactly 10 digits after cleaning
+  const rawMobile = String(volunteer.mobile_number);
+  const cleanMobile = rawMobile.replace(/\D/g, '');
+  if (cleanMobile.length !== 10) {
+    errors.push(`Row ${rowIndex}: Mobile Number "${rawMobile}" must contain exactly 10 digits.`);
+  } else {
+     volunteer.mobile_number = cleanMobile; // Store cleaned number
   }
 
-  // Mobile number validation
-  if (volunteer.mobile_number) {
-    // Clean mobile number
-    const cleanMobile = String(volunteer.mobile_number).replace(/\D/g, '');
-    if (cleanMobile.length !== 10) {
-      // If the number is too short and looks like a single digit, skip it
-      if (cleanMobile.length === 1) {
-        console.warn(`Row ${rowIndex}: Skipping invalid mobile number "${volunteer.mobile_number}"`);
-        delete volunteer.mobile_number;
-      } else {
-        errors.push(`Row ${rowIndex}: Mobile number must be 10 digits (got ${cleanMobile.length} digits)`);
-      }
-    } else {
-      // Update the mobile number with cleaned version
-      volunteer.mobile_number = cleanMobile;
-    }
-  }
-
-  // Aadhar number validation
-  if (volunteer.aadhar_number) {
-    // Clean Aadhar number
-    const cleanAadhar = String(volunteer.aadhar_number).replace(/\D/g, '');
+  // Aadhar Number (Optional): If present, must be 12 digits after cleaning
+  if (volunteer.aadhar_number !== undefined && volunteer.aadhar_number !== null && String(volunteer.aadhar_number).trim() !== '') {
+    const rawAadhar = String(volunteer.aadhar_number);
+    const cleanAadhar = rawAadhar.replace(/\D/g, '');
     if (cleanAadhar.length !== 12) {
-      // If the number is too short and looks like a single digit, skip it
-      if (cleanAadhar.length === 1) {
-        console.warn(`Row ${rowIndex}: Skipping invalid Aadhar number "${volunteer.aadhar_number}"`);
-        delete volunteer.aadhar_number;
-      } else {
-        errors.push(`Row ${rowIndex}: Aadhar number must be 12 digits (got ${cleanAadhar.length} digits)`);
-      }
+      errors.push(`Row ${rowIndex}: Aadhar Number "${rawAadhar}" must contain exactly 12 digits if provided.`);
     } else {
-      // Update the Aadhar number with cleaned version
-      volunteer.aadhar_number = cleanAadhar;
+       volunteer.aadhar_number = cleanAadhar; // Store cleaned number
     }
+  } else {
+      volunteer.aadhar_number = null; // Ensure it's null if empty/missing
   }
 
-  // Age validation
-  if (volunteer.age !== undefined && volunteer.age !== null && (isNaN(volunteer.age) || volunteer.age < 1 || volunteer.age > 99)) { // Added isNaN check
-    // If age is invalid, set it to null
-    console.warn(`Row ${rowIndex}: Invalid age "${volunteer.age}", setting to null`);
-    volunteer.age = null;
+  // Age: Must be a number between 18 and 99
+  const ageNum = Number(volunteer.age);
+  if (isNaN(ageNum) || ageNum < 18 || ageNum > 99) {
+    errors.push(`Row ${rowIndex}: Age "${volunteer.age}" must be a number between 18 and 99.`);
+  } else {
+     volunteer.age = ageNum; // Store validated number
+  }
+
+  // Gender (Optional): If present, must be 'male' or 'female' (case-insensitive)
+  if (volunteer.gender !== undefined && volunteer.gender !== null && String(volunteer.gender).trim() !== '') {
+    const genderLower = String(volunteer.gender).toLowerCase().trim();
+    if (!['male', 'female'].includes(genderLower)) {
+      errors.push(`Row ${rowIndex}: Gender "${volunteer.gender}" must be 'male' or 'female' if provided.`);
+    } else {
+       volunteer.gender = genderLower; // Store normalized gender
+    }
+  } else {
+      volunteer.gender = null; // Ensure it's null if empty/missing
+  }
+
+  // Dates (Optional): Attempt to parse if present
+  ['prashanti_arrival', 'prashanti_departure'].forEach(key => {
+      const dateKey = key as keyof VolunteerExcelRow;
+      if (volunteer[dateKey] !== undefined && volunteer[dateKey] !== null && String(volunteer[dateKey]).trim() !== '') {
+          try {
+              let parsedDate: Date | null = null;
+              if (typeof volunteer[dateKey] === 'number') {
+                  // Try parsing Excel date number
+                  const excelDate = XLSX.SSF.parse_date_code(volunteer[dateKey] as number);
+                  if (excelDate) {
+                      // Use Date.UTC to avoid timezone issues from Excel numbers
+                      parsedDate = new Date(Date.UTC(excelDate.y, excelDate.m - 1, excelDate.d));
+                  }
+              } else if (volunteer[dateKey] instanceof Date) {
+                  parsedDate = volunteer[dateKey] as Date;
+              } else {
+                  // Try parsing common string formats (add more as needed)
+                  parsedDate = new Date(String(volunteer[dateKey]));
+              }
+
+              // Check if the parsed date is valid
+              if (parsedDate && !isNaN(parsedDate.getTime())) {
+                  // Store valid date as ISO string (YYYY-MM-DD) for consistency
+                  volunteer[dateKey] = parsedDate.toISOString().split('T')[0];
+              } else {
+                  // If parsing failed, push error and set to null
+                  errors.push(`Row ${rowIndex}: Invalid date format for ${key}: "${volunteer[dateKey]}"`);
+                  volunteer[dateKey] = null;
+              }
+          } catch (e) {
+              // Catch any other errors during date processing
+              errors.push(`Row ${rowIndex}: Error parsing date for ${key}: "${volunteer[dateKey]}"`);
+              volunteer[dateKey] = null;
+          }
+      } else {
+          // Ensure null if empty/missing
+          volunteer[dateKey] = null;
+      }
+  });
+
+
+  // Normalize boolean for is_cancelled (actual 'yes'/'no' conversion happens later)
+  if (volunteer.is_cancelled !== undefined && volunteer.is_cancelled !== null) {
+      volunteer.is_cancelled = normalizeBoolean(volunteer.is_cancelled);
+  } else {
+      volunteer.is_cancelled = false; // Default to false if missing
   }
 
   return errors;
 }
 
-// Add this type definition at the top with other types
-type DatabaseFields = {
-  sai_connect_id: string;
-  full_name: string;
-  age?: number | null;
-  aadhar_number?: string;
-  mobile_number?: string;
-  sss_district?: string;
-  samiti_or_bhajan_mandli?: string;
-  education?: string;
-  special_qualifications?: string;
-  last_service_location?: string | null;
-  other_service_location?: string | null;
-  prashanti_arrival?: string | null;
-  prashanti_departure?: string | null;
-  duty_point?: string | null;
-  is_cancelled: boolean;
+
+// Updated function to transform validated data to DB format
+function transformToDatabaseFormat(volunteer: VolunteerExcelRow): DatabaseInsertData {
+    // Validation should ensure required fields are present and correctly typed by now
+    const dbData: DatabaseInsertData = {
+      sai_connect_id: String(volunteer.sai_connect_id!), // Ensure string
+      full_name: String(volunteer.full_name!),
+      age: Number(volunteer.age!),
+      mobile_number: String(volunteer.mobile_number!),
+      sss_district: String(volunteer.sss_district!),
+      is_cancelled: normalizeBoolean(volunteer.is_cancelled) ? 'yes' : 'no', // Convert boolean to 'yes'/'no'
+
+      // Optional fields - use validated value or null
+      aadhar_number: volunteer.aadhar_number ? String(volunteer.aadhar_number) : null,
+      gender: volunteer.gender ? String(volunteer.gender) : null,
+      samiti_or_bhajan_mandli: volunteer.samiti_or_bhajan_mandli ? String(volunteer.samiti_or_bhajan_mandli) : null,
+      education: volunteer.education ? String(volunteer.education) : null,
+      special_qualifications: volunteer.special_qualifications ? String(volunteer.special_qualifications) : null,
+      last_service_location: volunteer.last_service_location ? String(volunteer.last_service_location) : null,
+      other_service_location: volunteer.other_service_location ? String(volunteer.other_service_location) : null,
+      prashanti_arrival: volunteer.prashanti_arrival ? String(volunteer.prashanti_arrival) : null, // Already ISO string or null from validation
+      prashanti_departure: volunteer.prashanti_departure ? String(volunteer.prashanti_departure) : null, // Already ISO string or null from validation
+      duty_point: volunteer.duty_point ? String(volunteer.duty_point) : null,
+    };
+
+    // Return the constructed object directly.
+    return dbData;
 }
 
-// Add this function to filter and transform data
-function transformToDatabaseFormat(volunteer: Partial<VolunteerExcelData>): Partial<DatabaseFields> {
-  // Explicitly define fields that can be string | null | undefined and handle them
-  const dbFields: Partial<DatabaseFields> = {
-    sai_connect_id: volunteer.sai_connect_id, // Required, should not be null/undefined here
-    full_name: volunteer.full_name,       // Required, should not be null/undefined here
-    age: volunteer.age,                   // Optional number | null
-    aadhar_number: volunteer.aadhar_number ?? undefined, // Convert null to undefined if needed by DB type
-    mobile_number: volunteer.mobile_number ?? undefined, // Convert null to undefined
-    sss_district: volunteer.sss_district ?? undefined,   // Convert null to undefined
-    gender: volunteer.gender ?? undefined,             // Added gender, convert null to undefined
-    samiti_or_bhajan_mandli: volunteer.samiti_or_bhajan_mandli ?? undefined, // Convert null to undefined
-    education: volunteer.education ?? undefined,         // Convert null to undefined
-    special_qualifications: volunteer.special_qualifications ?? undefined, // Convert null to undefined
-    last_service_location: volunteer.last_service_location, // Already allows null
-    other_service_location: volunteer.other_service_location, // Already allows null
-    prashanti_arrival: volunteer.prashanti_arrival,       // Already allows null
-    prashanti_departure: volunteer.prashanti_departure,   // Already allows null
-    duty_point: volunteer.duty_point ?? undefined,         // Convert null to undefined
-    is_cancelled: volunteer.is_cancelled ?? false        // Default to false if null/undefined
-  };
-
-  // Remove only undefined values, keep nulls where allowed by DatabaseFields type
-  return Object.fromEntries(
-    Object.entries(dbFields).filter(([_, value]) => value !== undefined)
-  ) as Partial<DatabaseFields>;
-}
-
-// Add this type for database headers
-type DatabaseHeader = {
-  key: string;
-  label: string;
-  required: boolean;
-  type: 'string' | 'number' | 'boolean' | 'date';
-}
-
-// Define database headers
-const databaseHeaders: DatabaseHeader[] = [
-  { key: 'sai_connect_id', label: 'SAI Connect ID', required: true, type: 'string' },
-  { key: 'full_name', label: 'Full Name', required: true, type: 'string' },
-  { key: 'age', label: 'Age', required: true, type: 'number' },
-  { key: 'aadhar_number', label: 'Aadhar Number', required: false, type: 'string' },
-  { key: 'mobile_number', label: 'Mobile Number', required: true, type: 'string' },
-  { key: 'sss_district', label: 'SSS District', required: true, type: 'string' },
-  { key: 'samiti_or_bhajan_mandli', label: 'Samiti or Bhajan Mandli', required: false, type: 'string' },
-  { key: 'education', label: 'Education', required: false, type: 'string' },
-  { key: 'special_qualifications', label: 'Special Qualifications', required: false, type: 'string' },
-  { key: 'last_service_location', label: 'Last Service Location', required: false, type: 'string' },
-  { key: 'other_service_location', label: 'Other Service Location', required: false, type: 'string' },
-  { key: 'prashanti_arrival', label: 'Prashanti Arrival', required: false, type: 'string' },
-  { key: 'prashanti_departure', label: 'Prashanti Departure', required: false, type: 'string' },
-  { key: 'duty_point', label: 'Duty Point', required: false, type: 'string' },
-  { key: 'is_cancelled', label: 'Is Cancelled', required: false, type: 'boolean' }
-];
 
 interface ExcelUploadProps {
   onSuccess?: () => void;
@@ -294,19 +359,7 @@ export function ExcelUpload({ onSuccess, userRole }: ExcelUploadProps) { // Acce
     }
   }
 
-  const normalizeHeader = (header: string): string => {
-    const normalized = header.toLowerCase().trim()
-    return headerMapping[normalized] || normalized
-  }
-
-  const parseBoolean = (value: any): boolean => {
-    if (typeof value === 'boolean') return value
-    if (typeof value === 'string') {
-      const lowered = value.toLowerCase().trim()
-      return lowered === 'yes' || lowered === 'true' || lowered === 'हाँ' || lowered === '1'
-    }
-    return Boolean(value)
-  }
+  // Removed normalizeHeader and parseBoolean as logic is integrated elsewhere
 
   const handleUpload = async () => {
     // Prevent upload if user doesn't have permission
@@ -342,265 +395,267 @@ export function ExcelUpload({ onSuccess, userRole }: ExcelUploadProps) { // Acce
       const data = await file.arrayBuffer()
       const workbook = XLSX.read(data)
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][]
+      // Read as raw values to handle dates better
+      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true }) as unknown[][]
 
       if (rawData.length < 2) {
         throw new Error("File is empty or contains only headers")
       }
 
-      // Get Excel headers and normalize them
-      const excelHeaders = (rawData[0] as string[]).map(header => 
+      // --- Header Processing ---
+      const excelHeaders = (rawData[0] as any[]).map(header =>
         header ? String(header).toLowerCase().trim() : ''
-      )
-      
-      // Create header mapping
-      const columnMapping: { [key: number]: string } = {}
-      const missingRequiredHeaders: string[] = []
+      );
 
-      // Match Excel headers with database headers
+      const columnMapping: { [excelHeaderIndex: number]: keyof VolunteerExcelRow } = {};
+      const mappedDbKeys = new Set<string>();
+      const missingRequiredHeaders: string[] = [];
+
       excelHeaders.forEach((excelHeader, index) => {
-        if (!excelHeader) return
-
-        // Try to match with database header key or label
-        const matchedHeader = databaseHeaders.find(dbHeader => 
-          dbHeader.key.toLowerCase() === excelHeader ||
-          dbHeader.label.toLowerCase() === excelHeader
-        )
-
-        if (matchedHeader) {
-          columnMapping[index] = matchedHeader.key
+        if (!excelHeader) return;
+        const mappedKey = headerMapping[excelHeader];
+        if (mappedKey) {
+          columnMapping[index] = mappedKey;
+          mappedDbKeys.add(mappedKey);
         } else {
-          console.warn(`Unmatched header: "${excelHeader}"`)
-        }
-      })
-
-      // Check for required headers
-      databaseHeaders.forEach(dbHeader => {
-        if (dbHeader.required) {
-          const found = Object.values(columnMapping).includes(dbHeader.key)
-          if (!found) {
-            missingRequiredHeaders.push(dbHeader.label)
+          // Attempt matching against labels as fallback
+          const matchedSchema = databaseSchema.find(h => h.label.toLowerCase() === excelHeader);
+          if (matchedSchema) {
+             columnMapping[index] = matchedSchema.key as keyof VolunteerExcelRow;
+             mappedDbKeys.add(matchedSchema.key);
+          } else {
+             console.warn(`Unmatched header in file: "${excelHeaders[index]}" (column ${index + 1})`);
           }
         }
-      })
+      });
 
-      // If required headers are missing, show error
+      // Check if all required DB headers were found in the Excel file
+      databaseSchema.forEach(dbHeader => {
+        if (dbHeader.required && !mappedDbKeys.has(dbHeader.key)) {
+          missingRequiredHeaders.push(dbHeader.label);
+        }
+      });
+
       if (missingRequiredHeaders.length > 0) {
         toast({
           title: "Missing Required Headers",
-          description: `The following required headers are missing: ${missingRequiredHeaders.join(', ')}`,
+          description: `The file is missing the following required columns: ${missingRequiredHeaders.join(', ')}. Please check the instructions.`,
           variant: "destructive",
-        })
-        return
+          duration: 7000
+        });
+        setIsUploading(false); // Reset state
+        setProgress(0);
+        setFile(null);
+        const fileInput = document.getElementById('excel-file') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+        return; // Stop processing
       }
 
-      setProgress(30)
+      setProgress(30);
 
-      // Process rows with header mapping
-      const rows = rawData.slice(1) as unknown[][]
-      const volunteers: Partial<VolunteerExcelData>[] = []
-      const validationErrors: string[] = []
+      // --- Row Processing & Validation ---
+      const rows = rawData.slice(1);
+      const processedVolunteers: VolunteerExcelRow[] = [];
+      const allValidationErrors: string[] = [];
 
       rows.forEach((row, index) => {
-        try {
-          const volunteer: Partial<VolunteerExcelData> = {
-            is_cancelled: false
-          }
+        const rowIndexInFile = index + 2; // User-friendly row number (1-based index + header)
+        const volunteer: VolunteerExcelRow = {};
 
-          // Process each cell based on column mapping
-          Object.entries(columnMapping).forEach(([colIndex, dbKey]) => {
-            try {
-              const value = row[parseInt(colIndex)]
-              if (value !== undefined && value !== null) {
-                const dbHeader = databaseHeaders.find(h => h.key === dbKey)
-                if (!dbHeader) return
+        // Map row data based on headers
+        Object.entries(columnMapping).forEach(([colIndexStr, dbKey]) => {
+          const colIndex = parseInt(colIndexStr);
+          volunteer[dbKey] = row[colIndex]; // Keep raw value for now
+        });
 
-                switch (dbHeader.type) {
-                  case 'number':
-                    if (dbKey === 'age') {
-                      const ageValue = parseInt(String(value))
-                      volunteer.age = isNaN(ageValue) ? null : ageValue
-                    }
-                    break
-                  case 'boolean':
-                    (volunteer as any)[dbKey] = normalizeBoolean(value)
-                    break
-                  case 'date':
-                    if (dbKey === 'prashanti_arrival' || dbKey === 'prashanti_departure') {
-                      try {
-                        const dateValue = XLSX.SSF.parse_date_code(Number(value))
-                        if (dateValue) {
-                          (volunteer as any)[dbKey] = new Date(dateValue.y, dateValue.m - 1, dateValue.d).toISOString()
-                        } else {
-                          (volunteer as any)[dbKey] = null
-                        }
-                      } catch (dateError) {
-                        (volunteer as any)[dbKey] = null
-                        console.warn(`Invalid date format in row ${index + 2}, column ${parseInt(colIndex) + 1}`)
-                      }
-                    }
-                    break
-                  default:
-                    (volunteer as any)[dbKey] = String(value).trim()
-                }
-              }
-            } catch (cellError) {
-              console.warn(`Error processing cell in row ${index + 2}, column ${parseInt(colIndex) + 1}:`, cellError)
-              validationErrors.push(`Row ${index + 2}, Column ${parseInt(colIndex) + 1}: Invalid data format`)
-            }
-          })
-
-          // Validate the volunteer data
-          const rowErrors = validateVolunteerData(volunteer, index + 2)
-          if (rowErrors.length > 0) {
-            validationErrors.push(...rowErrors)
-          } else {
-            volunteers.push(volunteer)
-          }
-        } catch (error) {
-          console.error(`Error processing row ${index + 2}:`, error)
-          validationErrors.push(`Row ${index + 2}: ${error instanceof Error ? error.message : 'Invalid data format'}`)
+        // Validate the structured row data
+        const rowErrors = validateVolunteerData(volunteer, rowIndexInFile);
+        if (rowErrors.length > 0) {
+          allValidationErrors.push(...rowErrors);
+        } else {
+          processedVolunteers.push(volunteer); // Add validated volunteer
         }
-      })
+      });
 
-      // If there are validation errors, show them and stop
-      if (validationErrors.length > 0) {
-        console.error("Validation errors:", validationErrors)
+      // If validation errors occurred, show them and stop
+      if (allValidationErrors.length > 0) {
+        console.error("Validation errors:", allValidationErrors);
+        // Show only the first few errors in the toast for brevity
+        const errorSummary = allValidationErrors.slice(0, 5).join('; ');
         toast({
-          title: "Data Validation Failed",
-          description: `Found ${validationErrors.length} validation errors. Some data has been automatically corrected (padded IDs, removed invalid numbers). Please check the console for details.`,
+          title: `Data Validation Failed (${allValidationErrors.length} errors)`,
+          description: `Please fix the errors in your file. Examples: ${errorSummary}${allValidationErrors.length > 5 ? '...' : ''}`,
           variant: "destructive",
-        })
-        return
+          duration: 10000 // Longer duration for errors
+        });
+         setIsUploading(false); // Reset state
+         setProgress(0);
+         setFile(null);
+         const fileInput = document.getElementById('excel-file') as HTMLInputElement;
+         if (fileInput) fileInput.value = '';
+        return; // Stop processing
       }
 
-      setProgress(40)
+      setProgress(40);
 
-      // Deduplicate volunteers
-      const { uniqueVolunteers, stats } = deduplicateVolunteers(volunteers)
-
-      // Show deduplication results
+      // --- Deduplication ---
+      const { uniqueVolunteers, stats } = deduplicateVolunteers(processedVolunteers);
       if (stats.duplicateRows > 0) {
         toast({
-          title: "Duplicate Records Found (Warning)", // Adjusted title
-          description: `Found ${stats.duplicateRows} duplicate records out of ${stats.totalRows} total records. ${stats.uniqueRows} unique records will be uploaded. Check console for duplicate IDs.`,
-          variant: "default", // Changed variant from warning to default
-          duration: 5000 // Increased duration
-        })
-        console.log("Duplicate SAI Connect IDs:", stats.duplicateIds)
+          title: "Duplicate Records Found",
+          description: `${stats.duplicateRows} duplicate SAI Connect IDs found and ignored. ${stats.uniqueRows} unique records will be processed.`,
+          variant: "default", // Use default variant for info/warning
+          duration: 6000
+        });
+        console.log("Ignored duplicate SAI Connect IDs:", stats.duplicateIds);
       }
 
-      setProgress(50)
+      if (uniqueVolunteers.length === 0) {
+         toast({ title: "No Valid Data", description: "No valid, unique volunteer records found to upload.", variant: "destructive" });
+         setIsUploading(false); setProgress(0); setFile(null);
+         const fileInput = document.getElementById('excel-file') as HTMLInputElement; if (fileInput) fileInput.value = '';
+         return;
+      }
 
-      // Insert data in batches with error handling
-      const batchSize = 50
-      const batches = []
+      setProgress(50);
+
+      // --- Database Insertion ---
+      const batchSize = 50; // Adjust as needed
+      const batches = [];
       for (let i = 0; i < uniqueVolunteers.length; i += batchSize) {
-        batches.push(uniqueVolunteers.slice(i, i + batchSize))
+        batches.push(uniqueVolunteers.slice(i, i + batchSize));
       }
 
-      let completedBatches = 0
-      let errors: string[] = []
-      let successfulInserts = 0
-      let ignoredFields: string[] = []
+      let completedBatches = 0;
+      const insertErrors: string[] = [];
+      let successfulInserts = 0;
 
-      // Process batches sequentially to avoid promise scope issues
       for (const batch of batches) {
         try {
-          // Transform the data to match database format
-          const transformedBatch = batch.map(volunteer => transformToDatabaseFormat(volunteer))
-          
-          // Log any ignored fields from the first row (for debugging)
-          if (completedBatches === 0 && batch[0]) {
-            const extraFields = Object.keys(batch[0]).filter(
-              key => !Object.keys(transformedBatch[0]).includes(key)
-            )
-            if (extraFields.length > 0) {
-              ignoredFields = extraFields
-              console.log("Ignored fields:", ignoredFields)
-            }
-          }
+          // Transform data just before insertion
+          const transformedBatch = batch.map(v => transformToDatabaseFormat(v));
 
-          // Use await to ensure each batch is processed before moving to the next
+          // Upsert logic: Insert new volunteers or update existing ones based on sai_connect_id
           const { error, data } = await supabase
             .from("volunteers_volunteers")
-            .insert(transformedBatch)
-            .select()
+            .upsert(transformedBatch, { onConflict: 'sai_connect_id' }) // Use upsert
+            .select(); // Select to get count
 
           if (error) {
-            console.error("Database error:", error)
-            if (error.code === '23505') { // Unique violation error code
-              errors.push(`Batch ${completedBatches + 1}: Duplicate SAI Connect IDs found. Please check the data.`)
-            } else {
-              errors.push(`Batch ${completedBatches + 1}: ${error.message}`)
+            console.error("Database batch error:", error);
+            // Attempt to provide more specific feedback for common errors
+            if (error.code === '23502') { // Not-null violation
+                 insertErrors.push(`Batch ${completedBatches + 1}: Data missing for a required database column.`);
+            } else if (error.code === '22P02') { // Invalid text representation (e.g., wrong data type)
+                 insertErrors.push(`Batch ${completedBatches + 1}: Invalid data type found.`);
+            }
+             else {
+                 insertErrors.push(`Batch ${completedBatches + 1}: DB Error (${error.code || 'unknown'})`);
             }
           } else {
-            successfulInserts += data?.length || 0
+            successfulInserts += data?.length || 0; // Count successful upserts
           }
-
-        completedBatches++
-        setProgress(50 + Math.floor((completedBatches / batches.length) * 50))
-        } catch (error) {
-          console.error(`Error inserting batch ${completedBatches + 1}:`, error)
-          errors.push(`Batch ${completedBatches + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        } catch (batchError) {
+          console.error(`Error processing batch ${completedBatches + 1}:`, batchError);
+          insertErrors.push(`Batch ${completedBatches + 1}: Unexpected error during processing.`);
+        } finally {
+           completedBatches++;
+           setProgress(50 + Math.floor((completedBatches / batches.length) * 50));
         }
       }
 
-      if (errors.length > 0) {
+      // --- Final Feedback ---
+      if (insertErrors.length > 0) {
+        const errorSummary = insertErrors.slice(0,3).join('; ');
         toast({
-          title: "Upload completed with errors",
-          description: `Successfully uploaded ${successfulInserts} volunteers. ${errors.length} errors occurred.`,
+          title: "Upload Completed with Errors",
+          description: `Processed ${successfulInserts} records. ${insertErrors.length} batch(es) failed. Errors: ${errorSummary}${insertErrors.length > 3 ? '...' : ''}. Check console for details.`,
           variant: "destructive",
-        })
-        console.error("Upload errors:", errors)
+          duration: 10000
+        });
+        console.error("Upload batch errors:", insertErrors);
       } else {
-        let successMessage = `${successfulInserts} unique volunteers have been added to the database.`
-        if (ignoredFields.length > 0) {
-          successMessage += `\nNote: ${ignoredFields.length} extra fields were ignored.`
-        }
-      toast({
-        title: "Upload successful",
-          description: successMessage,
-      })
+        toast({
+          title: "Upload Successful",
+          description: `${successfulInserts} unique volunteer records processed successfully.`,
+          variant: "default", // Use default for success
+          duration: 5000
+        });
       }
 
-      if (onSuccess) onSuccess()
+      if (onSuccess) onSuccess(); // Trigger data refresh on parent page
+
     } catch (error) {
-      console.error("Error uploading file:", error)
+      console.error("Error during upload process:", error);
       toast({
-        title: "Upload failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred while processing the file.",
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
         variant: "destructive",
-      })
+        duration: 7000
+      });
     } finally {
-      setIsUploading(false)
-      setProgress(0)
-      setFile(null)
-      // Reset the file input
-      const fileInput = document.getElementById('excel-file') as HTMLInputElement
-      if (fileInput) fileInput.value = ''
+      setIsUploading(false);
+      setProgress(0);
+      setFile(null);
+      // Reset the file input visually
+      const fileInput = document.getElementById('excel-file') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
     }
   }
 
+
   return (
-    <Card className="border-blue-100 dark:border-blue-900/50">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-          <Upload className="h-5 w-5" />
-          Bulk Upload Volunteers
-        </CardTitle>
-        <CardDescription className="text-muted-foreground">
-          Upload volunteer data from Excel (.xlsx, .xls) or CSV files
-        </CardDescription>
+    <Card className="border-blue-100 dark:border-blue-900/50 relative"> {/* Added relative positioning */}
+      <CardHeader className="flex flex-row items-start justify-between"> {/* Changed items-center to items-start */}
+        <div> {/* Wrap title and description */}
+          <CardTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+            <Upload className="h-5 w-5" />
+            Bulk Upload Volunteers
+          </CardTitle>
+          <CardDescription className="text-muted-foreground pt-1"> {/* Added padding top */}
+            Upload or update volunteer data from Excel (.xlsx, .xls) or CSV files.
+          </CardDescription>
+        </div>
+         {/* Instructions Popover Trigger */}
+         <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground -mt-1 -mr-1"> {/* Adjusted margin for alignment */}
+                <Info className="h-5 w-5" />
+                <span className="sr-only">View Upload Instructions</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-96" side="left" align="start"> {/* Increased width, adjusted side/align */}
+              <div className="space-y-2">
+                <h4 className="font-medium leading-none">Upload Instructions</h4>
+                <div className="text-sm text-muted-foreground">
+                  <ul className="list-disc space-y-1 pl-4">
+                    <li>File: Excel (.xlsx, .xls) or CSV.</li>
+                    <li>First row must be headers (flexible names).</li>
+                    <li><strong>Required:</strong> {databaseSchema.filter(h => h.required).map(h => h.label).join(', ')}.</li>
+                    <li>Optional: {databaseSchema.filter(h => !h.required).map(h => h.label).join(', ')}.</li>
+                    <li>SAI Connect ID: 6 digits.</li>
+                    <li>Mobile: 10 digits.</li>
+                    <li>Aadhar: 12 digits (if provided).</li>
+                    <li>Age: 18-99.</li>
+                    <li>Gender: 'male'/'female' (if provided).</li>
+                    <li>Is Cancelled: 'yes'/'no', 'true'/'false', 1/0 (defaults to 'no').</li>
+                    <li>Dates: Standard formats (YYYY-MM-DD, etc.).</li>
+                    <li>Existing records (by SAI Connect ID) are updated.</li>
+                    <li>Duplicates within the file are ignored.</li>
+                  </ul>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-0"> {/* Removed static Alert box, adjusted padding */}
         <div className="space-y-2">
           <Label htmlFor="excel-file" className="text-muted-foreground">Select File</Label>
-          <Input 
-            id="excel-file" 
-            type="file" 
-            accept=".xlsx,.xls,.csv" 
-            onChange={handleFileChange} 
+          <Input
+            id="excel-file"
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={handleFileChange}
             disabled={isUploading || !canUpload}
             className={cn(
               "w-full",
@@ -617,9 +672,9 @@ export function ExcelUpload({ onSuccess, userRole }: ExcelUploadProps) { // Acce
         )}
       </CardContent>
       <CardFooter>
-        <Button 
-          onClick={handleUpload} 
-          disabled={!file || isUploading || !canUpload} 
+        <Button
+          onClick={handleUpload}
+          disabled={!file || isUploading || !canUpload}
           className={cn(
             "w-full",
             (!file || isUploading || !canUpload) && "opacity-50 cursor-not-allowed"

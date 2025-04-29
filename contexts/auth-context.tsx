@@ -105,8 +105,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     checkSessionAndFetchRole();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => { // Capture event
       if (!isMounted) return;
+
+      // Handle token refresh errors specifically
+      if (event === "TOKEN_REFRESHED" && session === null) {
+        // This often indicates the refresh token was invalid or not found.
+        console.error("Token refresh failed. Forcing logout.");
+        // Use a microtask to avoid potential issues with calling logout directly within the listener
+        queueMicrotask(() => {
+          if (isMounted) {
+             logout(); // Call the logout function which handles state clearing and redirect
+          }
+        });
+        return; // Stop further processing in this listener callback
+      }
+
       // setIsLoading(true); // Don't set loading true for background auth changes
       const currentUser = session?.user ?? null;
       let userRole: UserRole = null;
@@ -121,12 +135,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Set user and role together after role fetch (or if user is null)
+      // Ensure this only runs if we didn't already trigger a logout above
       if (isMounted) {
-        setUser(currentUser);
-        setRole(userRole);
-        // Ensure loading is false, even if it wasn't set to true here,
-        // in case a foreground action (login/logout) triggered loading before this ran.
-        setIsLoading(false);
+         setUser(currentUser);
+         setRole(userRole);
+         // Ensure loading is false, even if it wasn't set to true here,
+         // in case a foreground action (login/logout) triggered loading before this ran.
+         setIsLoading(false);
       }
     });
 

@@ -6,7 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 // Removed Tabs imports as they are not used
 import { useAuth } from "@/contexts/auth-context"
 // Removed getDashboardData from api-service (assuming it's not used)
-import { getDashboardPageData } from "@/lib/supabase-service" // Use combined function
+import {
+  getDashboardPageData,
+  fetchAllActiveVolunteers,
+  fetchAllRegisteredVolunteers,
+  fetchAllCancelledVolunteers
+} from "@/lib/supabase-service" // Use combined function & import new fetchers
 import { Loader2, Users, UserCheck, UserX, UserPlus, Download, Search, ChevronRight } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -100,6 +105,11 @@ export default function DashboardPage() {
   const [selectedVolunteer, setSelectedVolunteer] = useState<VolunteerData | null>(null)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
+  // State for download button loading indicators
+  const [isDownloadingActive, setIsDownloadingActive] = useState(false);
+  const [isDownloadingRegistered, setIsDownloadingRegistered] = useState(false);
+  const [isDownloadingCancelled, setIsDownloadingCancelled] = useState(false);
+
   // Fetch data using React Query with Suspense
   // useSuspenseQuery returns data directly or throws an error/suspends
   const { data: dashboardData } = useSuspenseQuery({
@@ -112,10 +122,11 @@ export default function DashboardPage() {
 
   // Removed error handling useEffect - Error Boundary will catch errors
 
-  // Memoize stats and volunteers - Now directly uses dashboardData
-  // No need for null checks as useSuspenseQuery guarantees data if it doesn't suspend/throw
+  // Memoize stats and the separate volunteer lists
   const dbStats = useMemo(() => dashboardData.stats, [dashboardData.stats]);
-  const recentVolunteers = useMemo(() => dashboardData.volunteers, [dashboardData.volunteers]);
+  const activeVolunteers = useMemo(() => dashboardData.activeVolunteers, [dashboardData.activeVolunteers]);
+  const recentRegistered = useMemo(() => dashboardData.recentRegistered, [dashboardData.recentRegistered]);
+  const recentCancelled = useMemo(() => dashboardData.recentCancelled, [dashboardData.recentCancelled]);
 
   // No longer need filteredRecentVolunteers memo as filtering happens inline
 
@@ -264,7 +275,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-black dark:text-white">
                   <UserCheck className="h-5 w-5 text-green-500" />
-                  Active Volunteers
+                  Active Volunteers {/* Corrected Title */}
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -300,11 +311,12 @@ export default function DashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody className="text-black dark:text-gray-300">
-                    {recentVolunteers
+                    {activeVolunteers // Use activeVolunteers list here
                       .filter(volunteer => {
                         const searchTerm = activeSearch.toLowerCase()
+                        // Check if not cancelled AND registered_volunteers is strictly null
                         return volunteer.is_cancelled === 'no' &&
-                          !volunteer.registered_volunteers &&
+                          volunteer.registered_volunteers === null &&
                           (!searchTerm ||
                             volunteer.full_name?.toLowerCase().includes(searchTerm) ||
                             volunteer.mobile_number?.toLowerCase().includes(searchTerm) ||
@@ -314,22 +326,36 @@ export default function DashboardPage() {
                   </TableBody>
                 </Table>
               </div>
-              <div className="mt-4 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // Filter ALL recentVolunteers by status only, ignoring activeSearch
-                    const activeVolunteers = recentVolunteers.filter(volunteer =>
-                      volunteer.is_cancelled === 'no' && !volunteer.registered_volunteers
-                    );
-                    downloadVolunteers(activeVolunteers, 'active');
-                  }}
-                  className="text-sai-orange hover:text-sai-orange-dark border-sai-orange hover:bg-sai-orange/10 dark:text-sai-orange dark:border-sai-orange dark:hover:bg-sai-orange/20"
-                >
+            <div className="mt-4 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isDownloadingActive} // Disable button while downloading
+                onClick={async () => {
+                  setIsDownloadingActive(true);
+                  try {
+                    const allActiveVolunteers = await fetchAllActiveVolunteers();
+                    downloadVolunteers(allActiveVolunteers, 'active');
+                  } catch (error) {
+                     console.error("Failed to download active volunteers:", error);
+                     toast({
+                       title: "Download Failed",
+                       description: "Could not download the list of active volunteers.",
+                       variant: "destructive",
+                     });
+                  } finally {
+                    setIsDownloadingActive(false);
+                  }
+                }}
+                className="text-sai-orange hover:text-sai-orange-dark border-sai-orange hover:bg-sai-orange/10 dark:text-sai-orange dark:border-sai-orange dark:hover:bg-sai-orange/20"
+              >
+                {isDownloadingActive ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
                   <Download className="mr-2 h-4 w-4" />
-                  Download Active
-                </Button>
+                )}
+                Download Active
+              </Button>
               </div>
             </CardContent>
           </Card>
@@ -340,7 +366,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-black dark:text-white">
                   <UserPlus className="h-5 w-5 text-blue-500" />
-                  Registered Volunteers
+                  Recent Registered Volunteers
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -375,11 +401,12 @@ export default function DashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody className="text-black dark:text-gray-300">
-                    {recentVolunteers
+                    {recentRegistered // Use recentRegistered list here
                       .filter(volunteer => {
                         const searchTerm = registeredSearch.toLowerCase()
+                         // Check if not cancelled AND registered_volunteers is NOT null
                         return volunteer.is_cancelled === 'no' &&
-                          volunteer.registered_volunteers &&
+                          volunteer.registered_volunteers !== null &&
                           (!searchTerm ||
                             volunteer.full_name?.toLowerCase().includes(searchTerm) ||
                             volunteer.mobile_number?.toLowerCase().includes(searchTerm) ||
@@ -389,22 +416,36 @@ export default function DashboardPage() {
                   </TableBody>
                 </Table>
               </div>
-              <div className="mt-4 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // Filter ALL recentVolunteers by status only, ignoring registeredSearch
-                    const registeredVolunteers = recentVolunteers.filter(volunteer =>
-                      volunteer.is_cancelled === 'no' && volunteer.registered_volunteers
-                    );
-                    downloadVolunteers(registeredVolunteers, 'registered');
-                  }}
-                  className="text-sai-orange hover:text-sai-orange-dark border-sai-orange hover:bg-sai-orange/10 dark:text-sai-orange dark:border-sai-orange dark:hover:bg-sai-orange/20"
-                >
+            <div className="mt-4 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isDownloadingRegistered} // Disable button while downloading
+                onClick={async () => {
+                  setIsDownloadingRegistered(true);
+                  try {
+                    const allRegisteredVolunteers = await fetchAllRegisteredVolunteers();
+                    downloadVolunteers(allRegisteredVolunteers, 'registered');
+                  } catch (error) {
+                     console.error("Failed to download registered volunteers:", error);
+                     toast({
+                       title: "Download Failed",
+                       description: "Could not download the list of registered volunteers.",
+                       variant: "destructive",
+                     });
+                  } finally {
+                    setIsDownloadingRegistered(false);
+                  }
+                }}
+                className="text-sai-orange hover:text-sai-orange-dark border-sai-orange hover:bg-sai-orange/10 dark:text-sai-orange dark:border-sai-orange dark:hover:bg-sai-orange/20"
+              >
+                 {isDownloadingRegistered ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
                   <Download className="mr-2 h-4 w-4" />
-                  Download Registered
-                </Button>
+                )}
+                Download Registered
+              </Button>
               </div>
             </CardContent>
           </Card>
@@ -415,7 +456,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-black dark:text-white">
                   <UserX className="h-5 w-5 text-red-500" />
-                  Cancelled Volunteers
+                  Recent Cancelled Volunteers
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -450,7 +491,7 @@ export default function DashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody className="text-black dark:text-gray-300">
-                    {recentVolunteers
+                    {recentCancelled // Use recentCancelled list here
                       .filter(volunteer => {
                         const searchTerm = cancelledSearch.toLowerCase()
                         return volunteer.is_cancelled === 'yes' &&
@@ -463,22 +504,36 @@ export default function DashboardPage() {
                   </TableBody>
                 </Table>
               </div>
-              <div className="mt-4 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // Filter ALL recentVolunteers by status only, ignoring cancelledSearch
-                    const cancelledVolunteers = recentVolunteers.filter(volunteer =>
-                      volunteer.is_cancelled === 'yes'
-                    );
-                    downloadVolunteers(cancelledVolunteers, 'cancelled');
-                  }}
-                  className="text-sai-orange hover:text-sai-orange-dark border-sai-orange hover:bg-sai-orange/10 dark:text-sai-orange dark:border-sai-orange dark:hover:bg-sai-orange/20"
-                >
+            <div className="mt-4 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isDownloadingCancelled} // Disable button while downloading
+                onClick={async () => {
+                  setIsDownloadingCancelled(true);
+                  try {
+                    const allCancelledVolunteers = await fetchAllCancelledVolunteers();
+                    downloadVolunteers(allCancelledVolunteers, 'cancelled');
+                  } catch (error) {
+                     console.error("Failed to download cancelled volunteers:", error);
+                     toast({
+                       title: "Download Failed",
+                       description: "Could not download the list of cancelled volunteers.",
+                       variant: "destructive",
+                     });
+                  } finally {
+                    setIsDownloadingCancelled(false);
+                  }
+                }}
+                className="text-sai-orange hover:text-sai-orange-dark border-sai-orange hover:bg-sai-orange/10 dark:text-sai-orange dark:border-sai-orange dark:hover:bg-sai-orange/20"
+              >
+                {isDownloadingCancelled ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
                   <Download className="mr-2 h-4 w-4" />
-                  Download Cancelled
-                </Button>
+                )}
+                Download Cancelled
+              </Button>
               </div>
             </CardContent>
           </Card>
