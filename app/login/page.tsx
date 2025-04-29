@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { LoaderCircle, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react"
-import Link from "next/link"
+// Removed unused Link import
 import Image from "next/image"
 // Removed Checkbox import
 import { motion } from "framer-motion"
@@ -60,7 +60,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password)
-      
+
       // Removed remember me logic
 
       toast({
@@ -68,32 +68,40 @@ export default function LoginPage() {
         description: "Welcome back! Redirecting to dashboard...",
       })
       router.push("/dashboard")
-    } catch (err: any) {
+    } catch (err) { // Use unknown and type check inside
       console.error("Login error:", err)
-      
-      if (err?.message === "Invalid login credentials") {
-        setErrorType('password')
-        setError("Invalid email or password")
+      let errorMessage = "An unexpected error occurred.";
+      let specificErrorType: 'email' | 'password' | null = null;
+
+      if (err instanceof Error) {
+          errorMessage = err.message;
+      }
+
+      if (errorMessage === "Invalid login credentials") {
+        specificErrorType = 'password'; // Or 'email'/'password' depending on desired UI feedback
+        errorMessage = "Invalid email or password"; // User-friendly message
         toast({
           title: "Login Failed",
           description: "Invalid email or password. Please try again.",
           variant: "destructive",
         })
-      } else if (err?.message === "Unauthorized access. Admin privileges required.") {
-        setError("This account does not have admin privileges")
+      } else if (errorMessage === "Unauthorized access. Admin privileges required.") {
+        errorMessage = "This account does not have admin privileges"; // User-friendly message
         toast({
           title: "Access Denied",
           description: "This account does not have admin privileges.",
           variant: "destructive",
         })
       } else {
-        setError("An unexpected error occurred")
+        // Keep generic error message for other cases
         toast({
           title: "Error",
           description: "Something went wrong. Please try again later.",
           variant: "destructive",
         })
       }
+      setError(errorMessage);
+      setErrorType(specificErrorType); // Set specific error type for input highlighting
     } finally {
       setIsSubmitting(false)
     }
@@ -102,7 +110,7 @@ export default function LoginPage() {
   if (isLoading || isSubmitting) {
     return (
       <div className="flex h-screen items-center justify-center bg-muted/40">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center space-y-4"
@@ -222,7 +230,7 @@ export default function LoginPage() {
                 )}
               </div>
               {/* Removed Remember me checkbox and label */}
-              {error && !errorType && (
+              {error && !errorType && ( // Show generic error if no specific field is highlighted
                 <motion.p
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -235,9 +243,9 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full bg-sai-orange hover:bg-sai-orange-dark"
-                disabled={isLoading}
+                disabled={isLoading || isSubmitting} // Disable on isSubmitting too
               >
-                {isLoading ? (
+                {(isLoading || isSubmitting) ? ( // Check both flags
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Signing in...

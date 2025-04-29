@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, Suspense } from "react" // Added useEffect and Suspense
+import { useState, useMemo, Suspense } from "react" // Removed useEffect import
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query" // Switched to useSuspenseQuery
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 // Removed Tabs imports as they are not used
@@ -31,13 +31,7 @@ import { VolunteerData, VolunteerStatus } from "@/lib/types"
 import { downloadToExcel } from "@/lib/xlsx-utils"
 import { Skeleton } from "@/components/ui/skeleton" // Import Skeleton for fallback
 
-// Define default stats structure
-const defaultStats = {
-  totalVolunteers: 0,
-  coming: 0,
-  notComing: 0,
-  registered: 0,
-};
+// Removed unused defaultStats variable
 
 // Define StatsSkeleton component (Defined ONCE here)
 const StatsSkeleton = () => (
@@ -93,7 +87,7 @@ const VolunteerListsSkeleton = () => (
 
 
 export default function DashboardPage() {
-  const { user, role } = useAuth() // Get role
+  const { role } = useAuth() // Removed unused user variable
   const { toast } = useToast()
   const router = useRouter()
   const queryClient = useQueryClient() // Get query client

@@ -2,14 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Users, UserPlus, LogOut, Menu, UserCog } from "lucide-react" // Add UserCog
+import { LayoutDashboard, Users, UserPlus, LogOut, Menu } from "lucide-react" // Removed UserCog
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet" // Removed SheetHeader, SheetTitle
 import { useAuth, UserRole } from "@/contexts/auth-context" // Import UserRole
 import { Badge } from "@/components/ui/badge" // Import Badge
 import { cn } from "@/lib/utils"
 import { useState, useMemo } from "react" // Import useMemo
-import Image from "next/image"
+// Removed unused import: Image
 import { ThemeToggle } from "@/components/theme-toggle"
 import { motion } from "framer-motion"
 
@@ -45,7 +45,7 @@ interface SidebarProps {
 
 export function Sidebar({ userRole }: SidebarProps) { // Accept userRole prop
   const pathname = usePathname()
-  const { logout, user } = useAuth()
+  const { logout } = useAuth() // Removed unused user variable
   const [isOpen, setIsOpen] = useState(false)
 
   // Filter nav items based on role

@@ -20,16 +20,9 @@ import {
 import { useToast } from "@/components/ui/use-toast"
 import { supabase } from "@/lib/supabase"
 import { registerVolunteer } from "@/lib/supabase-service"
-import { Badge } from "@/components/ui/badge"
-import { TableBody, TableRow, TableCell } from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Plus, Loader2, UserPlus, AlertCircle } from "lucide-react"
-import Link from "next/link"
+// Removed unused imports: Badge, TableBody, TableRow, TableCell, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem
+import { Loader2, UserPlus, AlertCircle } from "lucide-react" // Removed MoreHorizontal, Plus
+// Removed unused import: Link
 import { Label } from "@/components/ui/label"
 import { motion } from "framer-motion"
 

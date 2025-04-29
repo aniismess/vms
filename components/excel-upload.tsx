@@ -146,8 +146,8 @@ type DeduplicationStats = {
   duplicateIds: string[];
 }
 
-function deduplicateVolunteers(volunteers: VolunteerExcelRow[]): {
-  uniqueVolunteers: VolunteerExcelRow[];
+function deduplicateVolunteers(volunteers: VolunteerExcelRow[]): { // Use VolunteerExcelRow
+  uniqueVolunteers: VolunteerExcelRow[]; // Use VolunteerExcelRow
   stats: DeduplicationStats;
 } {
   const seen = new Map<string, VolunteerExcelRow>();
@@ -176,7 +176,7 @@ function deduplicateVolunteers(volunteers: VolunteerExcelRow[]): {
   };
 }
 
-function normalizeBoolean(value: any): boolean {
+function normalizeBoolean(value: unknown): boolean { // Use unknown for better type safety
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value === 1;
   if (typeof value === 'string') {
@@ -555,7 +555,7 @@ export function ExcelUpload({ onSuccess, userRole }: ExcelUploadProps) { // Acce
           } else {
             successfulInserts += data?.length || 0; // Count successful upserts
           }
-        } catch (batchError) {
+        } catch (batchError) { // Catch specific batch processing errors
           console.error(`Error processing batch ${completedBatches + 1}:`, batchError);
           insertErrors.push(`Batch ${completedBatches + 1}: Unexpected error during processing.`);
         } finally {
@@ -585,7 +585,7 @@ export function ExcelUpload({ onSuccess, userRole }: ExcelUploadProps) { // Acce
 
       if (onSuccess) onSuccess(); // Trigger data refresh on parent page
 
-    } catch (error) {
+    } catch (error) { // Catch broader errors (file reading, initial processing)
       console.error("Error during upload process:", error);
       toast({
         title: "Upload Failed",

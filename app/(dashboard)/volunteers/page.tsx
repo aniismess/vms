@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/auth-context"
 import { deleteVolunteerFromDb, cancelVolunteerInDb } from "@/lib/supabase-service"
-import { Loader2, MoreHorizontal, UserX, Search, Download, UserPlus, Eye, X, Edit } from "lucide-react"
+import { Loader2, MoreHorizontal, UserX, Search, UserPlus, Eye, X, Edit } from "lucide-react" // Removed Download
 import { Badge } from "@/components/ui/badge"
 import { ExcelUpload } from "@/components/excel-upload"
 import { useToast } from "@/components/ui/use-toast"
@@ -28,7 +28,7 @@ export default function VolunteersPage() {
   const { role } = useAuth() // Removed unused user variable
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { data: volunteers = [], isLoading } = useVolunteers() // Removed unused error variable
+  const { data: volunteers = [], isLoading } = useVolunteers() // error variable already removed previously
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedVolunteer, setSelectedVolunteer] = useState<VolunteerData | null>(null) // Use correct type
@@ -97,7 +97,7 @@ export default function VolunteersPage() {
         variant: "default",
         duration: 3000,
       })
-    } catch (err: any) { // Add type 'any' to access err.message
+    } catch (err) { // Use specific type if possible, or keep generic Error
       console.error('Error cancelling volunteer:', err)
       let description = "Could not cancel the volunteer. Please try again."
       if (err instanceof Error) {
