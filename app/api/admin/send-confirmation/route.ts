@@ -1,3 +1,5 @@
+// not using this anymore will remove this later
+
 import { NextResponse } from 'next/server'
 import { createTransport } from 'nodemailer'
 

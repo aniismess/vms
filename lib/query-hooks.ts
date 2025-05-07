@@ -6,13 +6,13 @@ export const QUERY_KEYS = {
   VOLUNTEER: "volunteer",
 } as const
 
-// Hooks for fetching data
+
 export function useVolunteers() {
   return useQuery({
     queryKey: [QUERY_KEYS.VOLUNTEERS],
     queryFn: getVolunteers,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 5 * 60 * 1000, 
+    gcTime: 30 * 60 * 1000, 
   })
 }
 
@@ -21,12 +21,12 @@ export function useVolunteer(saiConnectId: string) {
     queryKey: [QUERY_KEYS.VOLUNTEER, saiConnectId],
     queryFn: () => getVolunteerById(saiConnectId),
     enabled: !!saiConnectId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 5 * 60 * 1000, 
+    gcTime: 30 * 60 * 1000, 
   })
 }
 
-// Mutation hooks for updating data
+
 export function useUpdateVolunteer() {
   const queryClient = useQueryClient()
 

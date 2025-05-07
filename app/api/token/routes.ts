@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  // Return a static token for development
-  return NextResponse.json({ token: "your-local-dummy-token" });
+  return new Response(JSON.stringify({ token: 'static-token' }), {
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
