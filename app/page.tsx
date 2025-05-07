@@ -9,7 +9,6 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // Add a small delay to ensure smooth transition
     const timer = setTimeout(() => {
       router.push("/login")
     }, 100)
@@ -45,4 +44,3 @@ export default function Home() {
     </div>
   )
 }
-

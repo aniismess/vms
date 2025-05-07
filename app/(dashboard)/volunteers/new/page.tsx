@@ -8,13 +8,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-// Removed unused Switch import
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createVolunteerInDb } from "@/lib/supabase-service"
 import { Loader2, UserPlus, ArrowLeft } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { motion } from "framer-motion"
-import type { YesNoType } from "@/lib/supabase-service" // Re-added YesNoType import from correct path
+import type { YesNoType } from "@/lib/supabase-service"
 
 const SSS_DISTRICTS = [
   "Amla",
@@ -64,7 +63,6 @@ export default function NewVolunteerPage() {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Form fields
   const [saiConnectId, setSaiConnectId] = useState("")
   const [fullName, setFullName] = useState("")
   const [age, setAge] = useState("")
@@ -80,7 +78,6 @@ export default function NewVolunteerPage() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Validate full name (only alphabets and spaces)
     if (!/^[A-Za-z\s]+$/.test(fullName)) {
       toast({
         title: "Invalid Name",
@@ -91,7 +88,6 @@ export default function NewVolunteerPage() {
       return
     }
 
-    // Validate SAI Connect ID (only numbers)
     if (!/^\d{6}$/.test(saiConnectId)) {
       toast({
         title: "Invalid SAI Connect ID",
@@ -102,7 +98,6 @@ export default function NewVolunteerPage() {
       return
     }
 
-    // Validate age (between 18 and 100)
     const ageNum = parseInt(age)
     if (isNaN(ageNum) || ageNum < 5 || ageNum > 100) {
       toast({
@@ -114,7 +109,6 @@ export default function NewVolunteerPage() {
       return
     }
 
-    // Validate mobile number (exactly 10 digits)
     if (mobileNumber && !/^\d{10}$/.test(mobileNumber)) {
       toast({
         title: "Invalid Mobile Number",
@@ -125,7 +119,6 @@ export default function NewVolunteerPage() {
       return
     }
 
-    // Validate Aadhar number (exactly 12 digits)
     if (aadharNumber && !/^\d{12}$/.test(aadharNumber)) {
       toast({
         title: "Invalid Aadhar Number",
@@ -148,7 +141,7 @@ export default function NewVolunteerPage() {
         samiti_or_bhajan_mandli: samiti,
         education: education,
         special_qualifications: qualifications || null,
-        is_cancelled: 'no' as YesNoType, // Explicitly cast to YesNoType
+        is_cancelled: 'no' as YesNoType,
         serial_number: null,
         prashanti_arrival: null,
         prashanti_departure: null,
@@ -165,7 +158,6 @@ export default function NewVolunteerPage() {
         title: "Success!",
         description: `Volunteer ${fullName} has been added successfully.`,
       })
-      // Add a small delay to show the success state
       await new Promise(resolve => setTimeout(resolve, 1000))
       router.push("/volunteers")
     } catch (error) {

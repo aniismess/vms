@@ -8,11 +8,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-// Removed unused import: import { cancelVolunteer } from "@/lib/api-service"
 import { cancelVolunteerInDb } from "@/lib/supabase-service"
 import { Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { UserRole } from "@/contexts/auth-context" // Import UserRole
+import { UserRole } from "@/contexts/auth-context"
 import { UserX } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -21,17 +20,15 @@ type CancelVolunteerFormProps = {
   userRole: UserRole
 }
 
-export function CancelVolunteerForm({ onSuccess, userRole }: CancelVolunteerFormProps) { // Removed unused token, dataSource
+export function CancelVolunteerForm({ onSuccess, userRole }: CancelVolunteerFormProps) {
   const [volunteerId, setVolunteerId] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
-  // Determine if the form should be enabled based on role
-  const canCancel = userRole === 'super_admin' || userRole === 'normal_admin'; // Allow normal_admin too
+  const canCancel = userRole === 'super_admin' || userRole === 'normal_admin';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Prevent submission if not allowed
     if (!canCancel) {
         toast({ title: "Permission Denied", description: "You do not have permission to cancel volunteers.", variant: "destructive" });
         return;
@@ -39,7 +36,6 @@ export function CancelVolunteerForm({ onSuccess, userRole }: CancelVolunteerForm
     setIsSubmitting(true)
 
     try {
-      // Show initial feedback
       toast({
         title: "Processing",
         description: "Verifying volunteer information...",
@@ -47,7 +43,6 @@ export function CancelVolunteerForm({ onSuccess, userRole }: CancelVolunteerForm
         duration: 2000,
       })
 
-      // Check if volunteer exists
       const { data: volunteer } = await supabase
         .from('volunteers_volunteers')
         .select(`
@@ -77,7 +72,6 @@ export function CancelVolunteerForm({ onSuccess, userRole }: CancelVolunteerForm
         return
       }
 
-      // Proceed with cancellation
       await cancelVolunteerInDb(volunteerId)
 
       toast({
@@ -157,4 +151,3 @@ export function CancelVolunteerForm({ onSuccess, userRole }: CancelVolunteerForm
     </Card>
   )
 }
-/*ok */

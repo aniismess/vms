@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/auth-context"
 import { deleteVolunteerFromDb, cancelVolunteerInDb } from "@/lib/supabase-service"
-import { Loader2, MoreHorizontal, UserX, Search, UserPlus, Eye, X, Edit } from "lucide-react" // Removed Download
+import { Loader2, MoreHorizontal, UserX, Search, UserPlus, Eye, X, Edit } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { ExcelUpload } from "@/components/excel-upload"
 import { useToast } from "@/components/ui/use-toast"
@@ -25,18 +25,17 @@ import type { VolunteerData } from "@/lib/types"
 import { CancelVolunteerForm } from "@/components/cancel-volunteer-form"
 
 export default function VolunteersPage() {
-  const { role } = useAuth() // Removed unused user variable
+  const { role } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { data: volunteers = [], isLoading } = useVolunteers() // error variable already removed previously
+  const { data: volunteers = [], isLoading } = useVolunteers()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [selectedVolunteer, setSelectedVolunteer] = useState<VolunteerData | null>(null) // Use correct type
+  const [selectedVolunteer, setSelectedVolunteer] = useState<VolunteerData | null>(null)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
   const filteredVolunteers = useMemo(() => {
     return volunteers.filter((volunteer) => {
-      // Status filter
       if (statusFilter === "active" && (volunteer.is_cancelled === 'yes' || volunteer.registered_volunteers)) {
         return false
       }
@@ -47,7 +46,6 @@ export default function VolunteersPage() {
         return false
       }
 
-      // Search filter
       const searchFields = [
         volunteer.sai_connect_id,
         volunteer.full_name,
@@ -62,7 +60,6 @@ export default function VolunteersPage() {
 
   const handleRegister = async () => {
     try {
-      // Invalidate both volunteers list and dashboard data
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["volunteers"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboardData"] })
@@ -86,7 +83,6 @@ export default function VolunteersPage() {
   const handleCancel = async (saiConnectId: string) => {
     try {
       await cancelVolunteerInDb(saiConnectId)
-      // Invalidate both volunteers list and dashboard data
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["volunteers"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboardData"] })
@@ -97,7 +93,7 @@ export default function VolunteersPage() {
         variant: "default",
         duration: 3000,
       })
-    } catch (err) { // Use specific type if possible, or keep generic Error
+    } catch (err) {
       console.error('Error cancelling volunteer:', err)
       let description = "Could not cancel the volunteer. Please try again."
       if (err instanceof Error) {
@@ -108,7 +104,6 @@ export default function VolunteersPage() {
         } else if (err.message === 'Could not cancel volunteer') {
           description = `Failed to update cancellation status for volunteer ${saiConnectId}.`
         }
-        // Keep the generic message for other unexpected errors
       }
       toast({
         title: "Cancellation Failed",
@@ -140,13 +135,12 @@ export default function VolunteersPage() {
     }
   }
 
-  const handleVolunteerClick = (volunteer: VolunteerData) => { // Use correct type
+  const handleVolunteerClick = (volunteer: VolunteerData) => {
     setSelectedVolunteer(volunteer)
     setIsProfileOpen(true)
   }
 
   const handleVolunteerUpdate = () => {
-    // Invalidate both volunteers list and dashboard data
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ["volunteers"] }),
       queryClient.invalidateQueries({ queryKey: ["dashboardData"] })
@@ -159,11 +153,8 @@ export default function VolunteersPage() {
     })
   }
 
-  // Wrap fetchData in useCallback to stabilize its reference
   const fetchData = useCallback(async () => {
     try {
-      // Use invalidateQueries without await as it doesn't need to block
-      // Invalidate both volunteers and dashboard data
       queryClient.invalidateQueries({ queryKey: ["volunteers"] });
       queryClient.invalidateQueries({ queryKey: ["dashboardData"] }); 
       toast({
@@ -181,14 +172,13 @@ export default function VolunteersPage() {
         duration: 4000,
       })
     }
-  }, [queryClient, toast]) // queryClient and toast are stable references
+  }, [queryClient, toast])
 
   useEffect(() => {
     let volunteersChannel: RealtimeChannel | null = null
     let registeredChannel: RealtimeChannel | null = null
     let isMounted = true
 
-    // Set up real-time subscriptions
     volunteersChannel = supabase
       .channel('volunteers-page-changes')
       .on('postgres_changes', 
@@ -223,14 +213,12 @@ export default function VolunteersPage() {
         console.log('Registered volunteers subscription status:', status)
       })
 
-    // Set up periodic refresh as backup
     const refreshInterval = setInterval(() => {
       if (isMounted) {
         fetchData()
       }
-    }, 30000) // Refresh every 30 seconds
+    }, 30000)
 
-    // Cleanup function
     return () => {
       isMounted = false
       if (volunteersChannel) {
@@ -241,7 +229,7 @@ export default function VolunteersPage() {
       }
       clearInterval(refreshInterval)
     }
-  }, [fetchData]) // Now only depends on the stable fetchData reference
+  }, [fetchData])
 
   if (isLoading) {
     return (
@@ -250,9 +238,6 @@ export default function VolunteersPage() {
       </div>
     )
   }
-
-  // Removed the check for the non-existent 'error' variable
-  // if (error) { ... }
 
   return (
     <div className="space-y-6">
@@ -274,10 +259,8 @@ export default function VolunteersPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Restored Cancel Volunteer Section */}
           <CancelVolunteerForm onSuccess={fetchData} userRole={role} />
 
-          {/* Restored Bulk Upload Section */}
           <ExcelUpload onSuccess={fetchData} userRole={role} />
         </div>
 
@@ -343,14 +326,14 @@ export default function VolunteersPage() {
                         <TableCell className="hidden sm:table-cell">{volunteer.mobile_number}</TableCell>
                         <TableCell className="hidden sm:table-cell">
                           <Badge
-                            variant={volunteer.is_cancelled === 'yes' ? "destructive" : undefined} // Use destructive variant only for cancelled
+                            variant={volunteer.is_cancelled === 'yes' ? "destructive" : undefined}
                             className={cn(
-                              "hover:opacity-80 transition-opacity", // Base classes
+                              "hover:opacity-80 transition-opacity",
                               volunteer.is_cancelled === 'yes'
-                                ? "" // Destructive variant handles red styling
+                                ? ""
                                 : volunteer.registered_volunteers
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-300 dark:border-blue-700" // Blue for Registered
-                                : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-300 dark:border-green-700" // Green for Active
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-300 dark:border-blue-700"
+                                : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-300 dark:border-green-700"
                             )}
                           >
                             {volunteer.is_cancelled === 'yes'
@@ -362,18 +345,15 @@ export default function VolunteersPage() {
                         </TableCell>
                         <TableCell className="hidden md:table-cell">{volunteer.sss_district}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-1"> {/* Reduced gap */}
-                            {/* View/Edit Button */}
+                          <div className="flex justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => handleVolunteerClick(volunteer)}
                               title={role === 'super_admin' ? "View/Edit Profile" : "View Profile"}
                             >
-                              {/* Show Edit icon for super_admin, Eye for normal_admin */}
                               {role === 'super_admin' ? <Edit className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
-                            {/* Actions Dropdown - Only for super_admin */}
                             {role === 'super_admin' && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -414,13 +394,12 @@ export default function VolunteersPage() {
         </Card>
       </div>
 
-      {/* Pass role to VolunteerProfileDialog */}
       <VolunteerProfileDialog
         volunteer={selectedVolunteer}
         isOpen={isProfileOpen}
         onOpenChange={setIsProfileOpen}
         onUpdate={handleVolunteerUpdate}
-        userRole={role} // Pass the role
+        userRole={role}
       />
     </div>
   )

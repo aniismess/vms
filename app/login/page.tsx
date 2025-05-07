@@ -11,9 +11,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { LoaderCircle, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react"
-// Removed unused Link import
 import Image from "next/image"
-// Removed Checkbox import
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 
@@ -27,11 +25,9 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
-  // Removed rememberMe state
   const [errorType, setErrorType] = useState<'email' | 'password' | null>(null)
 
   useEffect(() => {
-    // Removed logic for checking saved credentials
 
     if (user) {
       router.push("/dashboard")
@@ -61,14 +57,13 @@ export default function LoginPage() {
     try {
       await login(email, password)
 
-      // Removed remember me logic
 
       toast({
         title: "Success!",
         description: "Welcome back! Redirecting to dashboard...",
       })
       router.push("/dashboard")
-    } catch (err) { // Use unknown and type check inside
+    } catch (err) {
       console.error("Login error:", err)
       let errorMessage = "An unexpected error occurred.";
       let specificErrorType: 'email' | 'password' | null = null;
@@ -78,22 +73,21 @@ export default function LoginPage() {
       }
 
       if (errorMessage === "Invalid login credentials") {
-        specificErrorType = 'password'; // Or 'email'/'password' depending on desired UI feedback
-        errorMessage = "Invalid email or password"; // User-friendly message
+        specificErrorType = 'password';
+        errorMessage = "Invalid email or password";
         toast({
           title: "Login Failed",
           description: "Invalid email or password. Please try again.",
           variant: "destructive",
         })
       } else if (errorMessage === "Unauthorized access. Admin privileges required.") {
-        errorMessage = "This account does not have admin privileges"; // User-friendly message
+        errorMessage = "This account does not have admin privileges";
         toast({
           title: "Access Denied",
           description: "This account does not have admin privileges.",
           variant: "destructive",
         })
       } else {
-        // Keep generic error message for other cases
         toast({
           title: "Error",
           description: "Something went wrong. Please try again later.",
@@ -101,7 +95,7 @@ export default function LoginPage() {
         })
       }
       setError(errorMessage);
-      setErrorType(specificErrorType); // Set specific error type for input highlighting
+      setErrorType(specificErrorType);
     } finally {
       setIsSubmitting(false)
     }
@@ -123,7 +117,7 @@ export default function LoginPage() {
   }
 
   if (user) {
-    return null // Will redirect in useEffect
+    return null
   }
 
   return (
@@ -229,8 +223,7 @@ export default function LoginPage() {
                   </motion.p>
                 )}
               </div>
-              {/* Removed Remember me checkbox and label */}
-              {error && !errorType && ( // Show generic error if no specific field is highlighted
+              {error && !errorType && (
                 <motion.p
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -243,9 +236,9 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full bg-sai-orange hover:bg-sai-orange-dark"
-                disabled={isLoading || isSubmitting} // Disable on isSubmitting too
+                disabled={isLoading || isSubmitting}
               >
-                {(isLoading || isSubmitting) ? ( // Check both flags
+                {(isLoading || isSubmitting) ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Signing in...
@@ -254,12 +247,10 @@ export default function LoginPage() {
                   "Sign In"
                 )}
               </Button>
-              {/* Removed Sign up link */}
             </CardContent>
           </form>
-          <CardFooter className="flex justify-center text-center text-sm text-muted-foreground pt-4"> {/* Adjusted footer */}
+          <CardFooter className="flex justify-center text-center text-sm text-muted-foreground pt-4">
             <p>Need help? Contact your administrator</p>
-            {/* Removed Forgot password link */}
           </CardFooter>
         </Card>
       </motion.div>

@@ -1,39 +1,28 @@
 "use client"
 
-import { useState, useMemo, Suspense } from "react" // Removed useEffect import
-import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query" // Switched to useSuspenseQuery
+import { useState, useMemo, Suspense } from "react"
+import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-// Removed Tabs imports as they are not used
 import { useAuth } from "@/contexts/auth-context"
-// Removed getDashboardData from api-service (assuming it's not used)
 import {
   getDashboardPageData,
   fetchAllActiveVolunteers,
   fetchAllRegisteredVolunteers,
   fetchAllCancelledVolunteers
-} from "@/lib/supabase-service" // Use combined function & import new fetchers
+} from "@/lib/supabase-service"
 import { Loader2, Users, UserCheck, UserX, UserPlus, Download, Search, ChevronRight } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-// Removed unused Badge import
-// Removed unused cn import
-// Removed RealtimeChannel and supabase imports
-// Removed SearchBar import (using Input directly)
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-// Removed unused XLSX import
 import { motion } from "framer-motion"
 import { Input } from "@/components/ui/input"
 import Image from "next/image"
 import { VolunteerProfileDialog } from "@/components/volunteer-profile-dialog"
 import { VolunteerData, VolunteerStatus } from "@/lib/types"
-// Removed unused UserRole import
 import { downloadToExcel } from "@/lib/xlsx-utils"
-import { Skeleton } from "@/components/ui/skeleton" // Import Skeleton for fallback
+import { Skeleton } from "@/components/ui/skeleton"
 
-// Removed unused defaultStats variable
-
-// Define StatsSkeleton component (Defined ONCE here)
 const StatsSkeleton = () => (
   <div className="grid gap-4 md:grid-cols-4">
     {[...Array(4)].map((_, i) => (
@@ -50,7 +39,6 @@ const StatsSkeleton = () => (
   </div>
 );
 
-// Define VolunteerListsSkeleton component (Defined ONCE here)
 const VolunteerListsSkeleton = () => (
   <div className="grid gap-6 md:grid-cols-3">
     {[...Array(3)].map((_, i) => (
@@ -58,16 +46,15 @@ const VolunteerListsSkeleton = () => (
         <CardHeader>
           <div className="flex items-center justify-between">
             <Skeleton className="h-6 w-3/5" />
-            <Skeleton className="h-8 w-20" /> {/* View All button */}
+            <Skeleton className="h-8 w-20" />
           </div>
           <div className="mt-2">
-            <Skeleton className="h-10 w-full" /> {/* Search input */}
+            <Skeleton className="h-10 w-full" />
           </div>
         </CardHeader>
         <CardContent>
           <div className="max-h-[400px] overflow-y-auto space-y-2">
-            {/* Skeleton Table Rows */}
-            <Skeleton className="h-10 w-full" /> {/* Header */}
+            <Skeleton className="h-10 w-full" />
             {[...Array(5)].map((_, r) => (
               <div key={r} className="flex justify-between p-2">
                 <Skeleton className="h-5 w-1/3" />
@@ -77,7 +64,7 @@ const VolunteerListsSkeleton = () => (
             ))}
           </div>
           <div className="mt-4 flex justify-end">
-            <Skeleton className="h-9 w-36" /> {/* Download button */}
+            <Skeleton className="h-9 w-36" />
           </div>
         </CardContent>
       </Card>
@@ -87,49 +74,37 @@ const VolunteerListsSkeleton = () => (
 
 
 export default function DashboardPage() {
-  const { role } = useAuth() // Removed unused user variable
+  const { role } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
-  const queryClient = useQueryClient() // Get query client
+  const queryClient = useQueryClient()
 
-  // State for search inputs and dialog
   const [activeSearch, setActiveSearch] = useState("")
   const [registeredSearch, setRegisteredSearch] = useState("")
   const [cancelledSearch, setCancelledSearch] = useState("")
   const [selectedVolunteer, setSelectedVolunteer] = useState<VolunteerData | null>(null)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
-  // State for download button loading indicators
   const [isDownloadingActive, setIsDownloadingActive] = useState(false);
   const [isDownloadingRegistered, setIsDownloadingRegistered] = useState(false);
   const [isDownloadingCancelled, setIsDownloadingCancelled] = useState(false);
 
-  // Fetch data using React Query with Suspense
-  // useSuspenseQuery returns data directly or throws an error/suspends
   const { data: dashboardData } = useSuspenseQuery({
     queryKey: ['dashboardData'],
     queryFn: getDashboardPageData,
-    refetchInterval: 60000, // Refetch every 60 seconds (1 minute)
-    // enabled: !!user, // Removed: Not needed/supported with useSuspenseQuery in this context
-    // suspense: true, // Not needed with useSuspenseQuery
+    refetchInterval: 60000,
   })
 
-  // Removed error handling useEffect - Error Boundary will catch errors
-
-  // Memoize stats and the separate volunteer lists
   const dbStats = useMemo(() => dashboardData.stats, [dashboardData.stats]);
   const activeVolunteers = useMemo(() => dashboardData.activeVolunteers, [dashboardData.activeVolunteers]);
   const recentRegistered = useMemo(() => dashboardData.recentRegistered, [dashboardData.recentRegistered]);
   const recentCancelled = useMemo(() => dashboardData.recentCancelled, [dashboardData.recentCancelled]);
-
-  // No longer need filteredRecentVolunteers memo as filtering happens inline
 
   const handleVolunteerClick = (volunteer: VolunteerData) => {
     setSelectedVolunteer(volunteer)
     setIsProfileOpen(true)
   }
 
-  // Invalidate query on update to trigger refetch
   const handleVolunteerUpdate = () => {
     queryClient.invalidateQueries({ queryKey: ['dashboardData'] })
     toast({
@@ -143,7 +118,7 @@ export default function DashboardPage() {
   const renderVolunteerRow = (volunteer: VolunteerData) => (
     <TableRow
       key={volunteer.sai_connect_id}
-      className="cursor-pointer hover:bg-accent/50 transition-colors dark:hover:bg-gray-700/50" // Added dark mode hover
+      className="cursor-pointer hover:bg-accent/50 transition-colors dark:hover:bg-gray-700/50"
       onClick={() => handleVolunteerClick(volunteer)}
     >
       <TableCell className="font-medium text-black dark:text-gray-200">{volunteer.full_name}</TableCell>
@@ -152,7 +127,7 @@ export default function DashboardPage() {
     </TableRow>
   )
 
-  const downloadVolunteers = (volunteers: VolunteerData[], type: VolunteerStatus | string) => { // Allow string for type flexibility
+  const downloadVolunteers = (volunteers: VolunteerData[], type: VolunteerStatus | string) => {
     const data = volunteers.map(volunteer => ({
       "Full Name": volunteer.full_name || "N/A",
       "SAI Connect ID": volunteer.sai_connect_id,
@@ -175,12 +150,7 @@ export default function DashboardPage() {
     downloadToExcel(data, `${type}-volunteers-${new Date().toISOString().split('T')[0]}`)
   }
 
-  // Removed the manual isLoading check block
-  // Removed the isError check block - Error Boundary handles this
-
-  // Wrap data-dependent parts in Suspense
   return (
-    // Applied bg-gray-50 dark:bg-gray-900 here from layout (redundant but safe)
     <div className="space-y-6 p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -204,7 +174,6 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Wrap Stats Grid in Suspense */}
       <Suspense fallback={<StatsSkeleton />}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -212,7 +181,6 @@ export default function DashboardPage() {
           transition={{ delay: 0.1 }}
           className="grid gap-4 md:grid-cols-4"
         >
-          {/* Use dbStats from useMemo */}
           <Card className="border-sai-orange/20 hover:border-sai-orange/30 transition-all duration-300 hover:shadow-lg bg-white dark:bg-gray-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-black dark:text-white">Total Volunteers</CardTitle>
@@ -255,7 +223,6 @@ export default function DashboardPage() {
         </motion.div>
       </Suspense>
 
-      {/* Wrap Volunteer Lists Grid in Suspense */}
       <Suspense fallback={<VolunteerListsSkeleton />}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -263,13 +230,12 @@ export default function DashboardPage() {
           transition={{ delay: 0.2 }}
           className="grid gap-6 md:grid-cols-3"
         >
-          {/* Active Volunteers */}
           <Card className="border-sai-orange/20 hover:border-sai-orange/30 transition-all duration-300 hover:shadow-lg bg-white dark:bg-gray-800">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-black dark:text-white">
                   <UserCheck className="h-5 w-5 text-green-500" />
-                  Active Volunteers {/* Corrected Title */}
+                  Active Volunteers
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -295,7 +261,6 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="max-h-[400px] overflow-y-auto">
-                {/* Use recentVolunteers from useMemo */}
                 <Table>
                   <TableHeader className="sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
                     <TableRow>
@@ -305,10 +270,9 @@ export default function DashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody className="text-black dark:text-gray-300">
-                    {activeVolunteers // Use activeVolunteers list here
+                    {activeVolunteers
                       .filter(volunteer => {
                         const searchTerm = activeSearch.toLowerCase()
-                        // Check if not cancelled AND registered_volunteers is strictly null
                         return volunteer.is_cancelled === 'no' &&
                           volunteer.registered_volunteers === null &&
                           (!searchTerm ||
@@ -324,7 +288,7 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={isDownloadingActive} // Disable button while downloading
+                disabled={isDownloadingActive}
                 onClick={async () => {
                   setIsDownloadingActive(true);
                   try {
@@ -354,7 +318,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Registered Volunteers */}
           <Card className="border-sai-orange/20 hover:border-sai-orange/30 transition-all duration-300 hover:shadow-lg bg-white dark:bg-gray-800">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -395,10 +358,9 @@ export default function DashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody className="text-black dark:text-gray-300">
-                    {recentRegistered // Use recentRegistered list here
+                    {recentRegistered
                       .filter(volunteer => {
                         const searchTerm = registeredSearch.toLowerCase()
-                         // Check if not cancelled AND registered_volunteers is NOT null
                         return volunteer.is_cancelled === 'no' &&
                           volunteer.registered_volunteers !== null &&
                           (!searchTerm ||
@@ -414,7 +376,7 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={isDownloadingRegistered} // Disable button while downloading
+                disabled={isDownloadingRegistered}
                 onClick={async () => {
                   setIsDownloadingRegistered(true);
                   try {
@@ -444,7 +406,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Cancelled Volunteers */}
           <Card className="border-sai-orange/20 hover:border-sai-orange/30 transition-all duration-300 hover:shadow-lg bg-white dark:bg-gray-800">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -485,7 +446,7 @@ export default function DashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody className="text-black dark:text-gray-300">
-                    {recentCancelled // Use recentCancelled list here
+                    {recentCancelled
                       .filter(volunteer => {
                         const searchTerm = cancelledSearch.toLowerCase()
                         return volunteer.is_cancelled === 'yes' &&
@@ -502,7 +463,7 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={isDownloadingCancelled} // Disable button while downloading
+                disabled={isDownloadingCancelled}
                 onClick={async () => {
                   setIsDownloadingCancelled(true);
                   try {
@@ -538,8 +499,8 @@ export default function DashboardPage() {
         volunteer={selectedVolunteer}
         isOpen={isProfileOpen}
         onOpenChange={setIsProfileOpen}
-        onUpdate={handleVolunteerUpdate} // Use updated handler
-        userRole={role} // Pass role
+        onUpdate={handleVolunteerUpdate}
+        userRole={role}
       />
     </div>
   )

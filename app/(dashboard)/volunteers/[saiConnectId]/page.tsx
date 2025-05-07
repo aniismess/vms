@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react" // Import useEffect
+import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { getVolunteerById, updateVolunteerInDb } from "@/lib/supabase-service" // Removed unused cancelVolunteerInDb
+import { getVolunteerById, updateVolunteerInDb } from "@/lib/supabase-service"
 import { Loader2, User, ArrowLeft, Edit2, Save, X, CheckCircle2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { motion } from "framer-motion"
@@ -14,10 +14,10 @@ import { Badge } from "@/components/ui/badge"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { QUERY_KEYS } from "@/lib/query-hooks"
 import type { VolunteerData } from "@/lib/types"
-import { useAuth } from "@/contexts/auth-context" // Import useAuth
+import { useAuth } from "@/contexts/auth-context"
 
 export default function VolunteerDetailsPage() {
-  const { role } = useAuth() // Get user role
+  const { role } = useAuth()
   const router = useRouter()
   const params = useParams()
   const { toast } = useToast()
@@ -33,20 +33,17 @@ export default function VolunteerDetailsPage() {
   })
 
   useEffect(() => {
-    // Set initial state for editing only when volunteer data loads and not already editing
     if (volunteer && !editedVolunteer) {
       setEditedVolunteer(volunteer)
     }
-    // Reset editing state if volunteer data changes (e.g., navigating between profiles)
     if (volunteer && editedVolunteer && volunteer.sai_connect_id !== editedVolunteer.sai_connect_id) {
         setEditedVolunteer(volunteer);
         setIsEditing(false);
     }
-  }, [volunteer, editedVolunteer]) // Dependency array includes editedVolunteer
+  }, [volunteer, editedVolunteer])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Ensure only super_admin can submit
     if (!editedVolunteer || role !== 'super_admin') return
 
     try {
@@ -56,7 +53,7 @@ export default function VolunteerDetailsPage() {
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.VOLUNTEERS] }),
         queryClient.invalidateQueries({ queryKey: ["dashboardData"] })
       ]);
-      setIsEditing(false) // Exit editing mode on successful save
+      setIsEditing(false)
       toast({
         title: "Success",
         description: "Volunteer details updated successfully.",
@@ -73,7 +70,7 @@ export default function VolunteerDetailsPage() {
 
   const handleEditCancel = () => {
     setIsEditing(false)
-    if (volunteer) { // Reset to original fetched data
+    if (volunteer) {
       setEditedVolunteer(volunteer)
     }
   }
@@ -93,7 +90,7 @@ export default function VolunteerDetailsPage() {
     )
   }
 
-  if (error || !volunteer || !editedVolunteer) { // Check editedVolunteer as well
+  if (error || !volunteer || !editedVolunteer) {
     return (
       <div className="flex h-full items-center justify-center text-red-500">
         An error occurred while loading volunteer details or volunteer not found.
@@ -128,13 +125,11 @@ export default function VolunteerDetailsPage() {
         transition={{ delay: 0.1 }}
       >
         <Card className="border-sai-orange/20">
-          {/* Use form only if super_admin, otherwise just display data */}
           <form onSubmit={role === 'super_admin' ? handleSubmit : (e) => e.preventDefault()}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <User className="h-5 w-5 text-sai-orange" />
-                  {/* Display name from editedVolunteer for consistency */}
                   <CardTitle>{editedVolunteer.full_name}</CardTitle>
                 </div>
                 <div className="flex items-center gap-2">
@@ -143,9 +138,8 @@ export default function VolunteerDetailsPage() {
                   ) : editedVolunteer.registered_volunteers ? (
                     <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">Registered</Badge>
                   ) : (
-                    <Badge variant="secondary">Active</Badge> // Changed from Not Registered
+                    <Badge variant="secondary">Active</Badge>
                   )}
-                  {/* Edit/Save/Cancel Buttons Logic */}
                   {role === 'super_admin' ? (
                     isEditing ? (
                       <div className="flex gap-2">
@@ -177,14 +171,13 @@ export default function VolunteerDetailsPage() {
                         Edit
                       </Button>
                     )
-                  ) : null /* No edit button for normal_admin */}
+                  ) : null}
                 </div>
               </div>
               <CardDescription>SAI Connect ID: {editedVolunteer.sai_connect_id}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
-                {/* Field: Age */}
                 <div className="space-y-2">
                   <Label>Age</Label>
                   {isEditing && role === 'super_admin' ? (
@@ -199,7 +192,6 @@ export default function VolunteerDetailsPage() {
                     <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.age || "Not specified"}</div>
                   )}
                 </div>
-                {/* Field: Mobile Number */}
                 <div className="space-y-2">
                   <Label>Mobile Number</Label>
                   {isEditing && role === 'super_admin' ? (
@@ -212,7 +204,6 @@ export default function VolunteerDetailsPage() {
                     <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.mobile_number || "Not specified"}</div>
                   )}
                 </div>
-                 {/* Field: Aadhar Number */}
                  <div className="space-y-2">
                   <Label>Aadhar Number</Label>
                   {isEditing && role === 'super_admin' ? (
@@ -225,7 +216,6 @@ export default function VolunteerDetailsPage() {
                     <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.aadhar_number || "Not specified"}</div>
                   )}
                 </div>
-                {/* Field: SSS District */}
                 <div className="space-y-2">
                   <Label>SSS District</Label>
                   {isEditing && role === 'super_admin' ? (
@@ -237,11 +227,10 @@ export default function VolunteerDetailsPage() {
                     <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.sss_district || "Not specified"}</div>
                   )}
                 </div>
-                {/* Field: Gender */}
                 <div className="space-y-2">
                   <Label>Gender</Label>
                   {isEditing && role === 'super_admin' ? (
-                    <Input // Consider using Select if options are fixed
+                    <Input
                       value={editedVolunteer.gender || ''}
                       onChange={(e) => setEditedVolunteer(prev => prev ? { ...prev, gender: e.target.value } : null)}
                     />
@@ -249,7 +238,6 @@ export default function VolunteerDetailsPage() {
                     <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.gender || "Not specified"}</div>
                   )}
                 </div>
-                {/* Field: Samiti/Bhajan Mandli */}
                 <div className="space-y-2">
                   <Label>Samiti/Bhajan Mandli</Label>
                   {isEditing && role === 'super_admin' ? (
@@ -261,11 +249,10 @@ export default function VolunteerDetailsPage() {
                     <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.samiti_or_bhajan_mandli || "Not specified"}</div>
                   )}
                 </div>
-                {/* Field: Education */}
                 <div className="space-y-2">
                   <Label>Education</Label>
                   {isEditing && role === 'super_admin' ? (
-                    <Input // Consider using Select if options are fixed
+                    <Input
                       value={editedVolunteer.education || ''}
                       onChange={(e) => setEditedVolunteer(prev => prev ? { ...prev, education: e.target.value } : null)}
                     />
@@ -273,7 +260,6 @@ export default function VolunteerDetailsPage() {
                     <div className="text-sm p-2 min-h-[40px]">{editedVolunteer.education || "Not specified"}</div>
                   )}
                 </div>
-                {/* Field: Special Qualifications */}
                 <div className="space-y-2">
                   <Label htmlFor="qualifications">Special Qualifications</Label>
                   {isEditing && role === 'super_admin' ? (
@@ -288,7 +274,6 @@ export default function VolunteerDetailsPage() {
                 </div>
               </div>
 
-              {/* Registration Details Section (Read-only) */}
               {editedVolunteer.registered_volunteers && (
                 <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
                   <div className="flex items-center gap-2 text-blue-600 dark:text-blue-300 mb-2">

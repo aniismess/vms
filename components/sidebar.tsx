@@ -2,25 +2,23 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Users, UserPlus, LogOut, Menu } from "lucide-react" // Removed UserCog
+import { LayoutDashboard, Users, UserPlus, LogOut, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet" // Removed SheetHeader, SheetTitle
-import { useAuth, UserRole } from "@/contexts/auth-context" // Import UserRole
-import { Badge } from "@/components/ui/badge" // Import Badge
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { useAuth, UserRole } from "@/contexts/auth-context"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { useState, useMemo } from "react" // Import useMemo
-// Removed unused import: Image
+import { useState, useMemo } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { motion } from "framer-motion"
 
-// Define all possible nav items
 const allNavItems = [
   {
     title: "Dashboard",
     hindiTitle: "डैशबोर्ड",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ['normal_admin', 'super_admin'], // Roles that can see this
+    roles: ['normal_admin', 'super_admin'],
   },
   {
     title: "Volunteers",
@@ -34,26 +32,23 @@ const allNavItems = [
     hindiTitle: "स्वयंसेवक जोड़ें",
     href: "/volunteers/new",
     icon: UserPlus,
-    roles: ['normal_admin', 'super_admin'], // Normal admin can add
+    roles: ['normal_admin', 'super_admin'],
   },
-  // Removed Admins link item
 ];
 
 interface SidebarProps {
-  userRole: UserRole; // Define prop type
+  userRole: UserRole;
 }
 
-export function Sidebar({ userRole }: SidebarProps) { // Accept userRole prop
+export function Sidebar({ userRole }: SidebarProps) {
   const pathname = usePathname()
-  const { logout } = useAuth() // Removed unused user variable
+  const { logout } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
 
-  // Filter nav items based on role
   const navItems = useMemo(() => {
-    if (!userRole) return []; // Return empty if no role
+    if (!userRole) return [];
     return allNavItems.filter(item => item.roles.includes(userRole));
   }, [userRole]);
-
 
   const handleLogout = async () => {
     await logout()
@@ -62,7 +57,6 @@ export function Sidebar({ userRole }: SidebarProps) { // Accept userRole prop
 
   return (
     <div className="sticky top-0 z-50 w-full">
-      {/* Header with Sai Organisation branding */}
       <motion.div
         className="bg-gradient-to-r from-sai-orange via-sai-orange-dark to-sai-orange text-white shadow-lg dark:from-gray-800 dark:via-gray-900 dark:to-gray-800"
         initial={{ opacity: 0, y: -20 }}
@@ -74,7 +68,6 @@ export function Sidebar({ userRole }: SidebarProps) { // Accept userRole prop
             <div className="flex items-center space-x-2 sm:space-x-4">
               <Sheet open={isOpen} onOpenChange={setIsOpen}>
                 <SheetTrigger asChild>
-                  {/* Added hover effect */}
                   <Button variant="ghost" size="icon" className="md:hidden text-white hover:bg-white/10">
                     <Menu className="h-5 w-5" />
                   </Button>
@@ -121,18 +114,16 @@ export function Sidebar({ userRole }: SidebarProps) { // Accept userRole prop
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              {/* Display Role Badge */}
               {userRole && (
                 <Badge variant={userRole === 'super_admin' ? 'destructive' : 'secondary'} className="hidden sm:inline-flex">
                   {userRole === 'super_admin' ? 'Super Admin' : 'Admin'}
                 </Badge>
               )}
-              {/* Changed to ghost variant for better contrast on header */}
               <ThemeToggle variant="ghost" />
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden md:flex text-white hover:bg-white/10" // Added hover effect class directly
+                className="hidden md:flex text-white hover:bg-white/10"
                 onClick={handleLogout}
               >
                 <LogOut className="h-4 w-4" />
@@ -142,8 +133,6 @@ export function Sidebar({ userRole }: SidebarProps) { // Accept userRole prop
         </div>
       </motion.div>
 
-      {/* Desktop Navigation */}
-      {/* Added hover effects and dark mode adjustments to nav links */}
       <nav className="hidden md:flex items-center space-x-4 px-4 py-2 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
         {navItems.map((item) => (
           <Link
@@ -152,8 +141,8 @@ export function Sidebar({ userRole }: SidebarProps) { // Accept userRole prop
             className={cn(
               "flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
               pathname === item.href
-                ? "bg-sai-orange text-primary-foreground shadow-sm dark:bg-sai-orange dark:text-white" // Active state: orange background (ensure dark mode contrast)
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white" // Inactive state: muted text, accent background on hover (ensure dark mode contrast)
+                ? "bg-sai-orange text-primary-foreground shadow-sm dark:bg-sai-orange dark:text-white"
+                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
             )}
           >
             <item.icon className="h-4 w-4" />

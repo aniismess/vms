@@ -2,12 +2,10 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    // For development, return a dummy token
     if (process.env.NODE_ENV === 'development') {
       return NextResponse.json({ token: 'development-token' })
     }
 
-    // For production, use the actual API
     const response = await fetch("http://localhost:8000/api/admin-signin", {
       method: 'POST',
       headers: {
@@ -29,7 +27,6 @@ export async function GET() {
     return NextResponse.json(data)
   } catch (error) {
     console.error("Error fetching API token:", error)
-    // Return a development token in case of error
     return NextResponse.json({ token: 'development-token' })
   }
-} 
+}

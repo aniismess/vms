@@ -14,7 +14,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Edit2, Save, X, CheckCircle2, UserCheck } from "lucide-react"
 import { updateVolunteerInDb } from "@/lib/supabase-service"
 import type { VolunteerData } from "@/lib/types"
-import { UserRole } from "@/contexts/auth-context" // Import UserRole
+import { UserRole } from "@/contexts/auth-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const SSS_DISTRICTS = [
@@ -40,7 +40,7 @@ interface VolunteerProfileDialogProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   onUpdate: () => void
-  userRole: UserRole // Add userRole prop
+  userRole: UserRole
 }
 
 export function VolunteerProfileDialog({
@@ -48,14 +48,13 @@ export function VolunteerProfileDialog({
   isOpen,
   onOpenChange,
   onUpdate,
-  userRole // Accept userRole prop
+  userRole
 }: VolunteerProfileDialogProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedVolunteer, setEditedVolunteer] = useState<VolunteerData | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
-  // Determine if the current user can edit based on role
   const canEdit = userRole === 'super_admin';
 
   useEffect(() => {
@@ -64,14 +63,12 @@ export function VolunteerProfileDialog({
         ...volunteer,
         age: volunteer.age || null,
       })
-      // Reset editing state when volunteer changes
       setIsEditing(false);
     }
   }, [volunteer])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Double-check edit permission before submitting
     if (!canEdit) {
         toast({ title: "Permission Denied", description: "You do not have permission to edit profiles.", variant: "destructive" });
         return;
@@ -96,8 +93,8 @@ export function VolunteerProfileDialog({
         variant: "default",
         duration: 3000,
       })
-      setIsEditing(false); // Exit editing mode on successful save
-      onOpenChange(false); // Close dialog
+      setIsEditing(false);
+      onOpenChange(false);
     } catch (error) {
       console.error("Error updating volunteer:", error)
       toast({
@@ -117,7 +114,6 @@ export function VolunteerProfileDialog({
       return { ...prev, [field]: value };
     });
 
-    // Validation logic remains the same
     switch (field) {
       case 'mobile_number':
         if (value && !/^\d{10}$/.test(value)) {
@@ -140,7 +136,6 @@ export function VolunteerProfileDialog({
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    // Reset fields to original volunteer data
     if (volunteer) {
         setEditedVolunteer(volunteer);
     }
@@ -154,7 +149,6 @@ export function VolunteerProfileDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Volunteer Profile</span>
-            {/* Only show Edit/Save/Cancel buttons if user can edit */}
             {canEdit && (
               <>
                 {!isEditing ? (
@@ -176,9 +170,7 @@ export function VolunteerProfileDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Form submission is handled by the Save button, only enabled for super_admin */}
         <form onSubmit={(e) => { e.preventDefault(); if (canEdit) handleSubmit(e); }} className="space-y-6">
-          {/* Registration Details Section */}
           {volunteer.registered_volunteers && (
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <div className="flex items-center gap-2 mb-4">
@@ -191,16 +183,14 @@ export function VolunteerProfileDialog({
                   <div className="font-medium">{volunteer.registered_volunteers.service_location || "Not specified"}</div>
                 </div>
                 <div>
-                  <Label className="text-blue-700">Batch</Label> {/* Assuming batch exists */}
+                  <Label className="text-blue-700">Batch</Label>
                   <div className="font-medium">{volunteer.registered_volunteers.batch || "Not specified"}</div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Volunteer Details Section */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Full Name */}
             <div className="space-y-2">
               <Label htmlFor="full_name">Full Name</Label>
               {isEditing && canEdit ? (
@@ -214,7 +204,6 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
-            {/* Age */}
             <div className="space-y-2">
               <Label htmlFor="age">Age</Label>
               {isEditing && canEdit ? (
@@ -231,7 +220,6 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
-            {/* Mobile Number */}
             <div className="space-y-2">
               <Label htmlFor="mobile_number">Mobile Number</Label>
               {isEditing && canEdit ? (
@@ -246,7 +234,6 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
-            {/* Aadhar Number */}
             <div className="space-y-2">
               <Label htmlFor="aadhar_number">Aadhar Number</Label>
               {isEditing && canEdit ? (
@@ -261,7 +248,6 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
-            {/* SSS District */}
             <div className="space-y-2">
               <Label htmlFor="sss_district">SSS District</Label>
               {isEditing && canEdit ? (
@@ -285,7 +271,6 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
-            {/* Gender */}
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
               {isEditing && canEdit ? (
@@ -306,7 +291,6 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
-            {/* Education */}
             <div className="space-y-2">
               <Label htmlFor="education">Education</Label>
               {isEditing && canEdit ? (
@@ -330,7 +314,6 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
-            {/* Samiti/Bhajan Mandli */}
             <div className="space-y-2">
               <Label htmlFor="samiti">Samiti/Bhajan Mandli</Label>
               {isEditing && canEdit ? (
@@ -344,7 +327,6 @@ export function VolunteerProfileDialog({
               )}
             </div>
 
-            {/* Special Qualifications */}
             <div className="space-y-2">
               <Label htmlFor="qualifications">Special Qualifications</Label>
               {isEditing && canEdit ? (

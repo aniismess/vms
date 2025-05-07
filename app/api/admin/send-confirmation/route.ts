@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createTransport } from 'nodemailer'
-// Removed unused supabase import
 
 const transporter = createTransport({
   host: process.env.SMTP_HOST,
@@ -23,10 +22,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Generate confirmation URL using the environment variable
     const confirmUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/confirm?token=${token}&email=${encodeURIComponent(email)}`
 
-    // Send email to current admin
     await transporter.sendMail({
       from: process.env.SMTP_FROM,
       to: adminEmail,
