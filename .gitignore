@@ -42,3 +42,4 @@ next-env.d.ts
 .idea/
 .cursor
 .git-rewrite
+.env.production
