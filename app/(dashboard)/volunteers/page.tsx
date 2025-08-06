@@ -15,7 +15,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { RegisterVolunteerForm } from "@/components/register-volunteer-form"
 import { cn } from "@/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
-import { useVolunteers } from "@/lib/query-hooks"
+import { useVolunteers, useCancelVolunteer } from "@/lib/query-hooks"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { VolunteerProfileDialog } from "@/components/volunteer-profile-dialog"
@@ -29,6 +29,7 @@ export default function VolunteersPage() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { data: volunteers = [], isLoading } = useVolunteers()
+  const { mutate: cancelVolunteer } = useCancelVolunteer()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedVolunteer, setSelectedVolunteer] = useState<VolunteerData | null>(null)
@@ -80,38 +81,37 @@ export default function VolunteersPage() {
     }
   }
 
-  const handleCancel = async (saiConnectId: string) => {
-    try {
-      await cancelVolunteerInDb(saiConnectId)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["volunteers"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboardData"] })
-      ]);
-      toast({
-        title: "Volunteer Cancelled",
-        description: "The volunteer's service has been cancelled successfully.",
-        variant: "default",
-        duration: 3000,
-      })
-    } catch (err) {
-      console.error('Error cancelling volunteer:', err)
-      let description = "Could not cancel the volunteer. Please try again."
-      if (err instanceof Error) {
-        if (err.message === 'Could not find volunteer') {
-          description = `Volunteer with ID ${saiConnectId} not found.`
-        } else if (err.message === 'Could not unregister volunteer') {
-          description = `Failed to update registration status for volunteer ${saiConnectId}.`
-        } else if (err.message === 'Could not cancel volunteer') {
-          description = `Failed to update cancellation status for volunteer ${saiConnectId}.`
+  const handleCancel = (saiConnectId: string) => {
+    cancelVolunteer(saiConnectId, {
+      onSuccess: () => {
+        toast({
+          title: "Volunteer Cancelled",
+          description: "The volunteer's service has been cancelled successfully.",
+          variant: "default",
+          duration: 3000,
+        });
+        queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+      },
+      onError: (err) => {
+        console.error('Error cancelling volunteer:', err)
+        let description = "Could not cancel the volunteer. Please try again."
+        if (err instanceof Error) {
+          if (err.message === 'Could not find volunteer') {
+            description = `Volunteer with ID ${saiConnectId} not found.`
+          } else if (err.message === 'Could not unregister volunteer') {
+            description = `Failed to update registration status for volunteer ${saiConnectId}.`
+          } else if (err.message === 'Could not cancel volunteer') {
+            description = `Failed to update cancellation status for volunteer ${saiConnectId}.`
+          }
         }
+        toast({
+          title: "Cancellation Failed",
+          description: description,
+          variant: "destructive",
+          duration: 4000,
+        })
       }
-      toast({
-        title: "Cancellation Failed",
-        description: description,
-        variant: "destructive",
-        duration: 4000,
-      })
-    }
+    })
   }
 
   const handleDelete = async (saiConnectId: string) => {
@@ -259,9 +259,9 @@ export default function VolunteersPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <CancelVolunteerForm onSuccess={fetchData} userRole={role} />
+          <CancelVolunteerForm onSuccess={() => fetchData()} userRole={role} />
 
-          <ExcelUpload onSuccess={fetchData} userRole={role} />
+          <ExcelUpload onSuccess={() => fetchData()} userRole={role} />
         </div>
 
         <Card>

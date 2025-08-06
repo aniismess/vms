@@ -114,9 +114,16 @@ export function CancelVolunteerForm({ onSuccess, userRole }: CancelVolunteerForm
             <Label htmlFor="volunteer-id" className="text-muted-foreground">Sai Connect ID</Label>
             <Input
               id="volunteer-id"
-              placeholder="Enter Sai Connect ID"
+              placeholder="Enter 6-digit Sai Connect ID"
               value={volunteerId}
-              onChange={(e) => setVolunteerId(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.length <= 6 && /^\d*$/.test(value)) {
+                  setVolunteerId(value);
+                }
+              }}
+              maxLength={6}
+              pattern="\d{6}"
               required
               disabled={!canCancel}
               className={cn(
