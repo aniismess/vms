@@ -7,8 +7,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/auth-context"
-import { deleteVolunteerFromDb, cancelVolunteerInDb } from "@/lib/supabase-service"
-import { Loader2, MoreHorizontal, UserX, Search, UserPlus, Eye, X, Edit } from "lucide-react"
+import { deleteVolunteerFromDb, cancelVolunteerInDb, makeVolunteerActiveFromRegistered, makeVolunteerActiveFromCancelled, resetRegisteredVolunteers, resetCancelledVolunteers } from "@/lib/supabase-service"
+import { Loader2, MoreHorizontal, UserX, Search, UserPlus, Eye, X, Edit, UserCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { ExcelUpload } from "@/components/excel-upload"
 import { useToast } from "@/components/ui/use-toast"
@@ -23,6 +23,7 @@ import { RealtimeChannel } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import type { VolunteerData } from "@/lib/types"
 import { CancelVolunteerForm } from "@/components/cancel-volunteer-form"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 
 export default function VolunteersPage() {
   const { role } = useAuth()
@@ -34,6 +35,11 @@ export default function VolunteersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedVolunteer, setSelectedVolunteer] = useState<VolunteerData | null>(null)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [isUnregistering, setIsUnregistering] = useState<string | null>(null);
+  const [isUncancelling, setIsUncancelling] = useState<string | null>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetType, setResetType] = useState<"registered" | "cancelled" | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   const filteredVolunteers = useMemo(() => {
     return volunteers.filter((volunteer) => {
@@ -114,6 +120,60 @@ export default function VolunteersPage() {
     })
   }
 
+  const handleUnregister = async (saiConnectId: string) => {
+    setIsUnregistering(saiConnectId);
+    try {
+      await makeVolunteerActiveFromRegistered(saiConnectId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["volunteers"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboardData"] })
+      ]);
+      toast({
+        title: "Volunteer Unregistered",
+        description: "The volunteer has been successfully unregistered and is now active.",
+        variant: "default",
+        duration: 3000,
+      });
+    } catch (err) {
+      console.error('Error unregistering volunteer:', err);
+      toast({
+        title: "Unregistration Failed",
+        description: "Could not unregister the volunteer. Please try again.",
+        variant: "destructive",
+        duration: 4000,
+      });
+    } finally {
+      setIsUnregistering(null);
+    }
+  };
+
+  const handleUncancel = async (saiConnectId: string) => {
+    setIsUncancelling(saiConnectId);
+    try {
+      await makeVolunteerActiveFromCancelled(saiConnectId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["volunteers"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboardData"] })
+      ]);
+      toast({
+        title: "Volunteer Uncancelled",
+        description: "The volunteer has been successfully uncancelled and is now active.",
+        variant: "default",
+        duration: 3000,
+      });
+    } catch (err) {
+      console.error('Error uncancelling volunteer:', err);
+      toast({
+        title: "Uncancellation Failed",
+        description: "Could not uncancel the volunteer. Please try again.",
+        variant: "destructive",
+        duration: 4000,
+      });
+    } finally {
+      setIsUncancelling(null);
+    }
+  };
+
   const handleDelete = async (saiConnectId: string) => {
     try {
       await deleteVolunteerFromDb(saiConnectId)
@@ -173,6 +233,36 @@ export default function VolunteersPage() {
       })
     }
   }, [queryClient, toast])
+
+  const handleReset = async (type: "registered" | "cancelled") => {
+    setIsResetting(true);
+    try {
+      if (type === "registered") {
+        await resetRegisteredVolunteers();
+      } else {
+        await resetCancelledVolunteers();
+      }
+      queryClient.invalidateQueries({ queryKey: ["volunteers"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+      toast({
+        title: `Reset Successful`,
+        description: `The ${type} volunteers list has been archived and cleared.`,
+        variant: "default",
+        duration: 3000,
+      });
+    } catch (err) {
+      toast({
+        title: "Reset Failed",
+        description: `Could not reset the ${type} volunteers list. Please try again.`,
+        variant: "destructive",
+        duration: 4000,
+      });
+    } finally {
+      setIsResetting(false);
+      setResetDialogOpen(false);
+      setResetType(null);
+    }
+  };
 
   useEffect(() => {
     let volunteersChannel: RealtimeChannel | null = null
@@ -264,6 +354,25 @@ export default function VolunteersPage() {
           <ExcelUpload onSuccess={() => fetchData()} userRole={role} />
         </div>
 
+        {role === "super_admin" && (
+          <div className="flex gap-2 mb-4">
+            <Button
+              variant="outline"
+              onClick={() => { setResetDialogOpen(true); setResetType("registered"); }}
+              disabled={isResetting}
+            >
+              Reset Registered Volunteers
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { setResetDialogOpen(true); setResetType("cancelled"); }}
+              disabled={isResetting}
+            >
+              Reset Cancelled Volunteers
+            </Button>
+          </div>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Search Volunteers</CardTitle>
@@ -354,7 +463,7 @@ export default function VolunteersPage() {
                             >
                               {role === 'super_admin' ? <Edit className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
-                            {role === 'super_admin' && (
+                            {(role === 'super_admin' || role === 'normal_admin') && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon">
@@ -363,9 +472,41 @@ export default function VolunteersPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                  {volunteer.registered_volunteers && volunteer.is_cancelled === 'no' && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleUnregister(volunteer.sai_connect_id)}
+                                      disabled={isUnregistering === volunteer.sai_connect_id}
+                                      className="text-blue-600 focus:text-blue-600 focus:bg-blue-50"
+                                    >
+                                      {isUnregistering === volunteer.sai_connect_id ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <UserX className="mr-2 h-4 w-4" />
+                                      )}
+                                      Unregister Volunteer
+                                    </DropdownMenuItem>
+                                  )}
+                                  {volunteer.is_cancelled === 'yes' && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleUncancel(volunteer.sai_connect_id)}
+                                      disabled={isUncancelling === volunteer.sai_connect_id}
+                                      className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                                    >
+                                      {isUncancelling === volunteer.sai_connect_id ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <UserCheck className="mr-2 h-4 w-4" />
+                                      )}
+                                      Uncancel Volunteer
+                                    </DropdownMenuItem>
+                                  )}
+                                  {(volunteer.registered_volunteers && volunteer.is_cancelled === 'no') || volunteer.is_cancelled === 'yes' ? (
+                                    <DropdownMenuSeparator />
+                                  ) : null}
+
                                   <DropdownMenuItem
                                     onClick={() => handleCancel(volunteer.sai_connect_id)}
-                                    disabled={volunteer.is_cancelled === 'yes'}
+                                    disabled={Boolean(volunteer.is_cancelled === 'yes' || (volunteer.registered_volunteers && volunteer.is_cancelled === 'no'))}
                                     className="text-orange-600 focus:text-orange-600 focus:bg-orange-50"
                                   >
                                     <UserX className="mr-2 h-4 w-4" />
@@ -393,6 +534,16 @@ export default function VolunteersPage() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={resetDialogOpen}
+        onOpenChange={setResetDialogOpen}
+        title={`Confirm Reset of ${resetType === "registered" ? "Registered" : "Cancelled"} Volunteers`}
+        description={`Are you sure you want to archive and clear all ${resetType === "registered" ? "registered" : "cancelled"} volunteers? This action cannot be undone.`}
+        onConfirm={() => handleReset(resetType!)}
+        confirmText={isResetting ? "Resetting..." : "Yes, Reset"}
+        cancelText="Cancel"
+      />
 
       <VolunteerProfileDialog
         volunteer={selectedVolunteer}

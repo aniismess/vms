@@ -401,6 +401,58 @@ export async function registerVolunteer(data: {
 }
 
 
+export async function makeVolunteerActiveFromRegistered(saiConnectId: string) {
+  console.log(`Attempting to make volunteer active from registered: ${saiConnectId}`);
+  try {
+    const { error } = await supabase
+      .from('registered_volunteers')
+      .delete()
+      .eq('sai_connect_id', saiConnectId);
+
+    if (error) {
+      console.error(`Error unregistering volunteer ${saiConnectId}:`, error);
+      throw new Error('Could not unregister volunteer.');
+    }
+    console.log(`Successfully unregistered volunteer ${saiConnectId}.`);
+    return { success: true };
+  } catch (error) {
+    console.error(`Overall error making volunteer active from registered ${saiConnectId}:`, error);
+    throw error;
+  }
+}
+
+export async function makeVolunteerActiveFromCancelled(saiConnectId: string) {
+  console.log(`Attempting to make volunteer active from cancelled: ${saiConnectId}`);
+  try {
+    // First, ensure they are not in registered_volunteers
+    const { error: unregisterError } = await supabase
+      .from('registered_volunteers')
+      .delete()
+      .eq('sai_connect_id', saiConnectId);
+
+    if (unregisterError) {
+      console.error(`Error unregistering volunteer during uncancel ${saiConnectId}:`, unregisterError);
+      // Don't throw, continue with uncancel, but log the error
+    }
+
+    // Then, update their is_cancelled status
+    const { error: updateError } = await supabase
+      .from('volunteers_volunteers')
+      .update({ is_cancelled: 'no', updated_at: new Date().toISOString() })
+      .eq('sai_connect_id', saiConnectId);
+
+    if (updateError) {
+      console.error(`Error uncancelling volunteer ${saiConnectId}:`, updateError);
+      throw new Error('Could not uncancel volunteer.');
+    }
+    console.log(`Successfully uncancelled volunteer ${saiConnectId}.`);
+    return { success: true };
+  } catch (error) {
+    console.error(`Overall error making volunteer active from cancelled ${saiConnectId}:`, error);
+    throw error;
+  }
+}
+
 export async function getDashboardPageData() {
   console.log('Fetching dashboard data (stats, all active, recent registered, recent cancelled)...');
   try {
@@ -472,4 +524,46 @@ export async function getDashboardPageData() {
     
     throw error
   }
+}
+
+// Add these functions to handle reset actions
+
+export async function resetRegisteredVolunteers() {
+  // Archive all registered volunteers
+  const { error: archiveError } = await supabase.rpc(
+    'execute_sql',
+    {
+      sql: `INSERT INTO archived_registered_volunteers SELECT *, CURRENT_TIMESTAMP AS archived_at FROM registered_volunteers;`
+    }
+  );
+  if (archiveError) throw archiveError;
+
+  // Delete all registered volunteers
+  const { error: deleteError } = await supabase.rpc(
+    'execute_sql',
+    {
+      sql: `DELETE FROM registered_volunteers;`
+    }
+  );
+  if (deleteError) throw deleteError;
+}
+
+export async function resetCancelledVolunteers() {
+  // Archive all cancelled volunteers
+  const { error: archiveError } = await supabase.rpc(
+    'execute_sql',
+    {
+      sql: `INSERT INTO archived_cancelled_volunteers SELECT *, CURRENT_TIMESTAMP AS archived_at FROM volunteers_volunteers WHERE is_cancelled = 'yes';`
+    }
+  );
+  if (archiveError) throw archiveError;
+
+  // Set is_cancelled to 'no' for all cancelled volunteers
+  const { error: updateError } = await supabase.rpc(
+    'execute_sql',
+    {
+      sql: `UPDATE volunteers_volunteers SET is_cancelled = 'no' WHERE is_cancelled = 'yes';`
+    }
+  );
+  if (updateError) throw updateError;
 }

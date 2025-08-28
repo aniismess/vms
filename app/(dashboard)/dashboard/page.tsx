@@ -323,7 +323,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-black dark:text-white">
                   <UserPlus className="h-5 w-5 text-blue-500" />
-                  Recent Registered Volunteers
+                  Registered Volunteers
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -411,7 +411,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-black dark:text-white">
                   <UserX className="h-5 w-5 text-red-500" />
-                  Recent Cancelled Volunteers
+                  Cancelled Volunteers
                 </CardTitle>
                 <Button
                   variant="ghost"

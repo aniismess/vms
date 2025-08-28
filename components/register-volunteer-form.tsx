@@ -28,6 +28,63 @@ interface RegisterVolunteerFormProps {
   onRegister: () => void
 }
 
+const SERVICE_LOCATIONS = [
+  "Ganesh Gate & Sai Srinivasa Guest House",
+  "S1 & S2, Luggage Cloak Room, Buddha Park",
+  "S3 & R1 to R5 and Outside Santhi Bhavan",
+  "W1 to W6",
+  "Sai Kulwanth Hall and Roof Top",
+  "Yajurmandiram",
+  "Canteen Gate including Gopuram Wooden Gate & Frisking",
+  "Security Office & Shed No. 38",
+  "North Blocks: 1–9 & Shed No. 27",
+  "S4 to S9 & W7 to W9, Outside of Managing Trustee Office & AIP office",
+  "Gas Godown, Shopping Complex, Book Stall (Inside), Sadhana Trust and Sri Sathya Sai Hira Convention Centre",
+  "Shed No. 1–20 + 32–40, DD 1 & 2 and New Bhaktha Nivas",
+  "Culvert Gate (West Gate) & New Bhaktha Niwas Gate",
+  "Outside Area",
+  "South Indian Canteen",
+  "Sevadal Canteen",
+  "North Indian Canteen",
+  "Western Canteen",
+  "SSS Nithya Anna Seva",
+  "Xerox",
+  "Press",
+  "Shanthi Bhavan",
+  "Trust Office (Room No. 2)",
+  "Maintenance Tool Room",
+  "Drivers",
+  "Horticulture",
+  "Accommodation Office",
+  "Managing Trustee's Office",
+  "Shopping Complex",
+  "Stationery Shop",
+  "Books and Publications",
+  "Sathsang Hall + PRO Office + VIP Guest House",
+  "Bakery",
+  "Vibhuthi Packing",
+  "Chaitanya Jyothi and Gates",
+  "Gokulam",
+  "SSSIHMS + Airport",
+  "General Hospital",
+  "Task Force, Special Assignments, Swachchatha, Reserve",
+  "Gopuram Gate & Darshan Management",
+  "Gayatri Temple",
+  "Vara Lakshmi Temple",
+  "Conference Hall (Sathsang Hall)",
+  "Shed No. 28",
+  "North Block No. 8",
+  "Sai Gayathri Niwas (Ladies Sevadal Dormitory)",
+  "Sai Kulwanth Hall (Cleaning, Darshan Management and 2 Cloak Rooms)",
+  "Nagara Sankeerthana Road Cleaning",
+  "Eswaramma Women’s Welfare Trust – Kitchen",
+  "Eswaramma Women’s Welfare Trust – Kiosk Sales Counter",
+  "Museum",
+  "Flower Seva in East Prasanthi",
+  "Flower Seva in South Prasanthi",
+  "Water Plant",
+];
+
 export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps) {
   const [saiConnectId, setSaiConnectId] = useState('')
   const [age, setAge] = useState('')
@@ -216,10 +273,12 @@ export function RegisterVolunteerForm({ onRegister }: RegisterVolunteerFormProps
               <SelectTrigger id="service-location" className={error && error.includes('service location') ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Select service location" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="location1">Location 1</SelectItem>
-                <SelectItem value="location2">Location 2</SelectItem>
-                <SelectItem value="location3">Location 3</SelectItem>
+              <SelectContent side="bottom">
+                {SERVICE_LOCATIONS.map((location) => (
+                  <SelectItem key={location} value={location}>
+                    {location}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
