@@ -242,14 +242,16 @@ export default function VolunteersPage() {
       } else {
         await resetCancelledVolunteers();
       }
-      queryClient.invalidateQueries({ queryKey: ["volunteers"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+      await queryClient.invalidateQueries({ queryKey: ["volunteers"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
       toast({
         title: `Reset Successful`,
         description: `The ${type} volunteers list has been archived and cleared.`,
         variant: "default",
         duration: 3000,
       });
+      setResetDialogOpen(false);
+      setResetType(null);
     } catch (err) {
       toast({
         title: "Reset Failed",
@@ -257,10 +259,10 @@ export default function VolunteersPage() {
         variant: "destructive",
         duration: 4000,
       });
-    } finally {
-      setIsResetting(false);
       setResetDialogOpen(false);
       setResetType(null);
+    } finally {
+      setIsResetting(false);
     }
   };
 

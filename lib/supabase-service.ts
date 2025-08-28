@@ -529,11 +529,14 @@ export async function getDashboardPageData() {
 // Add these functions to handle reset actions
 
 export async function resetRegisteredVolunteers() {
-  // Archive all registered volunteers
+  // Archive all registered volunteers, skip duplicates
   const { error: archiveError } = await supabase.rpc(
     'execute_sql',
     {
-      sql: `INSERT INTO archived_registered_volunteers SELECT *, CURRENT_TIMESTAMP AS archived_at FROM registered_volunteers;`
+      sql: `INSERT INTO archived_registered_volunteers (sai_connect_id, batch, service_location, created_at, archived_at)
+        SELECT sai_connect_id, batch, service_location, created_at, CURRENT_TIMESTAMP
+        FROM registered_volunteers
+        ON CONFLICT (sai_connect_id) DO NOTHING;`
     }
   );
   if (archiveError) throw archiveError;
