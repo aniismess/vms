@@ -552,11 +552,16 @@ export async function resetRegisteredVolunteers() {
 }
 
 export async function resetCancelledVolunteers() {
-  // Archive all cancelled volunteers
+  // Archive all cancelled volunteers, skip duplicates
   const { error: archiveError } = await supabase.rpc(
     'execute_sql',
     {
-      sql: `INSERT INTO archived_cancelled_volunteers SELECT *, CURRENT_TIMESTAMP AS archived_at FROM volunteers_volunteers WHERE is_cancelled = 'yes';`
+      sql: `INSERT INTO archived_cancelled_volunteers (
+        serial_number, full_name, age, aadhar_number, sai_connect_id, mobile_number, sss_district, samiti_or_bhajan_mandli, education, special_qualifications, last_service_location, other_service_location, prashanti_arrival, prashanti_departure, duty_point, is_cancelled, created_by_id, gender, created_at, updated_at, sevadal_training_certificate, past_prashanti_service, archived_at
+      )
+      SELECT serial_number, full_name, age, aadhar_number, sai_connect_id, mobile_number, sss_district, samiti_or_bhajan_mandli, education, special_qualifications, last_service_location, other_service_location, prashanti_arrival, prashanti_departure, duty_point, is_cancelled, created_by_id, gender, created_at, updated_at, sevadal_training_certificate, past_prashanti_service, CURRENT_TIMESTAMP
+      FROM volunteers_volunteers WHERE is_cancelled = 'yes'
+      ON CONFLICT (sai_connect_id) DO NOTHING;`
     }
   );
   if (archiveError) throw archiveError;
